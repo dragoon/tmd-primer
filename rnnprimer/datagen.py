@@ -6,6 +6,7 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import tensorflow as tf
+from sklearn.preprocessing import StandardScaler
 
 AVG_WALK_SPEED = 5
 
@@ -105,6 +106,7 @@ def generate_walk_sample(avg_speed=AVG_WALK_SPEED, seq_size=100):
 @dataclass
 class Dataset:
     samples: List[Sample]
+    std_scaler: StandardScaler
 
     @staticmethod
     def generate(
@@ -122,35 +124,44 @@ class Dataset:
                     seg_size=train_seg_size, outlier_prob=train_outlier_prob
                 )
             )
-        return Dataset(samples)
+        return Dataset(samples, StandardScaler())
 
-    def get_flat_features(self) -> List[LabeledFeature]:
+    def _get_flat_features(self) -> List[LabeledFeature]:
         return list(chain.from_iterable(s.features for s in self.samples))
 
     def get_flat_X_y(self):
-        X, y = tuple(zip(*[(f.features, f.label) for f in self.get_flat_features()]))
+        X, y = tuple(zip(*[(f.features, f.label) for f in self._get_flat_features()]))
         p = np.random.permutation(len(X))
         return np.array(X)[p], np.array(y)[p]
 
-    def get_sequences(self):
+    def get_flat_X_y_scaled(self):
+        X, y = tuple(zip(*[(f.features, f.label) for f in self._get_flat_features()]))
+        X = self.std_scaler.fit_transform(X)
+        p = np.random.permutation(len(X))
+        return np.array(X)[p], np.array(y)[p]
+
+    def _get_sequences(self):
         sample_iter = (sample.labeled_features_tuples() for sample in self.samples)
         return (tuple(zip(*windows)) for windows in sample_iter)
 
-    def get_ndarray(self) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+    def _get_ndarray(self) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
         """
-        Same output as `get_weighted_sequences` but with Numpy ndarrays (features, labels) with
+        Same output as `get_sequences` but with Numpy ndarrays (features, labels) with
         respective shape ([time, features], [time, 1], [time]).
         This shape is useful for feeding the data into the Keras model.
         """
         return (
-            (np.array(features), np.expand_dims(np.array(labels), axis=-1),)
-            for features, labels in self.get_sequences()
+            (self.std_scaler.transform(np.array(features, copy=True)), np.expand_dims(np.array(labels), axis=-1),)
+            for features, labels in self._get_sequences()
         )
 
     def to_tfds(self, batch_size=20):
+        X = [f.features for f in self._get_flat_features()]
+        self.std_scaler.fit(X)
+
         return (
             tf.data.Dataset.from_generator(
-                lambda: self.get_ndarray(),
+                lambda: self._get_ndarray(),
                 (tf.float32, tf.int32),
                 output_shapes=(None, None),
             )
