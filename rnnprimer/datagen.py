@@ -44,15 +44,12 @@ class Sample:
         return fig
 
 
-def generate_sample(segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0):
+def generate_sample(
+    segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0
+):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
-            return LabeledFeature(
-                features=[
-                    AVG_WALK_SPEED,
-                ],
-                label=lf.label,
-            )
+            return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
         return lf
 
     def train_speed_func(i):
@@ -72,11 +69,14 @@ def generate_sample(segments=5, train_seg_size=100, walk_seg_size=100, outlier_p
 
     def generate_walk_segment(seq_size=walk_seg_size):
         return [
-                LabeledFeature(features=[s], label=1)
-                for s in [AVG_WALK_SPEED] * seq_size
-            ]
+            LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
+        ]
 
-    return Sample(generate_walk_segment() + [outlier_replace(lf) for lf in generate_train_segment() * segments] + generate_walk_segment())
+    return Sample(
+        generate_walk_segment()
+        + [outlier_replace(lf) for lf in generate_train_segment() * segments]
+        + generate_walk_segment()
+    )
 
 
 @dataclass
@@ -90,7 +90,13 @@ class Dataset:
     ):
         samples = []
         for _ in range(n_samples):
-            samples.append(generate_sample(train_seg_size=train_seg_size, walk_seg_size=walk_seq_size, outlier_prob=train_outlier_prob))
+            samples.append(
+                generate_sample(
+                    train_seg_size=train_seg_size,
+                    walk_seg_size=walk_seq_size,
+                    outlier_prob=train_outlier_prob,
+                )
+            )
 
         return Dataset(samples, StandardScaler())
 
@@ -119,7 +125,10 @@ class Dataset:
         This shape is useful for feeding the data into the Keras model.
         """
         return (
-            (self.std_scaler.transform(np.array(features, copy=True)), np.expand_dims(np.array(labels), axis=-1),)
+            (
+                self.std_scaler.transform(np.array(features, copy=True)),
+                np.expand_dims(np.array(labels), axis=-1),
+            )
             for features, labels in self._get_sequences()
         )
 
