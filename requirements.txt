@@ -2,3 +2,4 @@ numpy
 tensorflow
 plotly
 pandas
+scikit-learn
