@@ -39,12 +39,12 @@ class Sample:
         # Set x-axis title
         fig.update_xaxes(title_text="time step")
         # Set y-axes titles
-        fig.update_yaxes(title_text="speed", secondary_y=True)
+        fig.update_yaxes(title_text="speed")
         return fig
 
 
-def generate_train_sample(
-    avg_speed=100, avg_dist=10000, segments=5, seg_size=100, outlier_prob=0.0
+def generate_sample(
+    avg_speed=100, segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0
 ):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
@@ -56,31 +56,28 @@ def generate_train_sample(
             )
         return lf
 
-    def speed_func(i):
-        accel_n = int(seg_size * 0.2)
+    def train_speed_func(i):
+        accel_n = int(train_seg_size * 0.2)
         if i < accel_n:
             return (i * avg_speed) / accel_n
-        elif i > seg_size - accel_n:
-            return ((seg_size - i) * avg_speed) / accel_n
+        elif i > train_seg_size - accel_n:
+            return ((train_seg_size - i) * avg_speed) / accel_n
         else:
             return avg_speed
 
-    def generate_segment():
+    def generate_train_segment():
         return [
-            LabeledFeature(features=[speed_func(i)], label=0)
-            for i in range(seg_size)
+            LabeledFeature(features=[train_speed_func(i)], label=0)
+            for i in range(train_seg_size)
         ]
 
-    return Sample([outlier_replace(lf) for lf in generate_segment() * segments])
+    def generate_walk_segment(seq_size=walk_seg_size):
+        return [
+                LabeledFeature(features=[s], label=1)
+                for s in [AVG_WALK_SPEED] * seq_size
+            ]
 
-
-def generate_walk_sample(avg_speed=AVG_WALK_SPEED, seq_size=100):
-    return Sample(
-        [
-            LabeledFeature(features=[s], label=1)
-            for s in [avg_speed]*seq_size
-        ]
-    )
+    return Sample(generate_walk_segment() + [outlier_replace(lf) for lf in generate_train_segment() * segments] + generate_walk_segment())
 
 
 @dataclass
@@ -90,20 +87,12 @@ class Dataset:
 
     @staticmethod
     def generate(
-        n_samples=100, walk_seq_size=500, train_seg_size=100, train_outlier_prob=0.0
+        n_samples=100, walk_seq_size=250, train_seg_size=100, train_outlier_prob=0.0
     ):
         samples = []
-        # generate 1 labels
-        for _ in range(n_samples // 2):
-            samples.append(generate_walk_sample(seq_size=walk_seq_size))
+        for _ in range(n_samples):
+            samples.append(generate_sample(train_seg_size=train_seg_size, walk_seg_size=walk_seq_size, outlier_prob=train_outlier_prob))
 
-        # generate 0 labels
-        for _ in range(n_samples // 2):
-            samples.append(
-                generate_train_sample(
-                    seg_size=train_seg_size, outlier_prob=train_outlier_prob
-                )
-            )
         return Dataset(samples, StandardScaler())
 
     def _get_flat_features(self) -> List[LabeledFeature]:
