@@ -9,6 +9,7 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
 
 AVG_WALK_SPEED = 5
+AVG_TRAIN_SPEED = 100
 
 
 @dataclass
@@ -43,9 +44,7 @@ class Sample:
         return fig
 
 
-def generate_sample(
-    avg_speed=100, segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0
-):
+def generate_sample(segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
             return LabeledFeature(
@@ -59,11 +58,11 @@ def generate_sample(
     def train_speed_func(i):
         accel_n = int(train_seg_size * 0.2)
         if i < accel_n:
-            return (i * avg_speed) / accel_n
+            return (i * AVG_TRAIN_SPEED) / accel_n
         elif i > train_seg_size - accel_n:
-            return ((train_seg_size - i) * avg_speed) / accel_n
+            return ((train_seg_size - i) * AVG_TRAIN_SPEED) / accel_n
         else:
-            return avg_speed
+            return AVG_TRAIN_SPEED
 
     def generate_train_segment():
         return [
