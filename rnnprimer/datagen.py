@@ -79,6 +79,47 @@ def generate_sample(
     )
 
 
+def generate_random_sample(train_seg_size=100, outlier_prob=0.0):
+    def outlier_replace(lf: LabeledFeature):
+        if np.random.rand() <= outlier_prob:
+            return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
+        return lf
+
+    def train_speed_func(i):
+        accel_n = int(train_seg_size * 0.2)
+        if i < accel_n:
+            return (i * AVG_TRAIN_SPEED) / accel_n
+        elif i > train_seg_size - accel_n:
+            return ((train_seg_size - i) * AVG_TRAIN_SPEED) / accel_n
+        else:
+            return AVG_TRAIN_SPEED
+
+    def generate_train_segment():
+        return [
+            LabeledFeature(features=[train_speed_func(i)], label=0)
+            for i in range(train_seg_size)
+        ]
+
+    def generate_walk_segment(seq_size):
+        return [
+            LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
+        ]
+
+    total_seg_size = train_seg_size*10
+    # generate 5 train segments split between a walk
+    train_seg_N1 = int(np.random.randint(1, 5))
+    train_seg_N2 = 5 - train_seg_N1
+    start_walk_size = np.random.randint(1, int(total_seg_size/2))
+    end_walk_size = total_seg_size - 5*train_seg_size - start_walk_size
+
+    return Sample(
+        generate_walk_segment(start_walk_size)
+        + [outlier_replace(lf) for lf in generate_train_segment() * train_seg_N1]
+        + generate_walk_segment(end_walk_size)
+        + [outlier_replace(lf) for lf in generate_train_segment() * train_seg_N2]
+    )
+
+
 @dataclass
 class Dataset:
     samples: List[Sample]
@@ -94,6 +135,21 @@ class Dataset:
                 generate_sample(
                     train_seg_size=train_seg_size,
                     walk_seg_size=walk_seq_size,
+                    outlier_prob=train_outlier_prob,
+                )
+            )
+
+        return Dataset(samples, StandardScaler())
+
+    @staticmethod
+    def generate_random(
+            n_samples=100, train_seg_size=100, train_outlier_prob=0.0
+    ):
+        samples = []
+        for _ in range(n_samples):
+            samples.append(
+                generate_random_sample(
+                    train_seg_size=train_seg_size,
                     outlier_prob=train_outlier_prob,
                 )
             )
