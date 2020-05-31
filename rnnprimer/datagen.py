@@ -30,13 +30,6 @@ class Sample:
     def get_figure(self):
         fig = make_subplots(specs=[[{"secondary_y": True}]])
         speeds = [lf.features[0] for lf in self.features]
-        distances = [lf.features[1] for lf in self.features]
-
-        # Add traces
-        fig.add_trace(
-            go.Scatter(x=list(range(len(self))), y=distances, name="distance"),
-            secondary_y=False,
-        )
 
         fig.add_trace(
             go.Scatter(x=list(range(len(self))), y=speeds, name="speed"),
@@ -46,7 +39,6 @@ class Sample:
         # Set x-axis title
         fig.update_xaxes(title_text="time step")
         # Set y-axes titles
-        fig.update_yaxes(title_text="distance", secondary_y=False)
         fig.update_yaxes(title_text="speed", secondary_y=True)
         return fig
 
@@ -58,19 +50,11 @@ def generate_train_sample(
         if np.random.rand() <= outlier_prob:
             return LabeledFeature(
                 features=[
-                    np.random.normal(AVG_WALK_SPEED, AVG_WALK_SPEED / 2),
-                    lf.features[1],
+                    AVG_WALK_SPEED,
                 ],
                 label=lf.label,
             )
         return lf
-
-    def dist_func(i):
-        middle = seg_size // 2
-        if i <= middle:
-            return avg_dist * i / middle
-        else:
-            return avg_dist * (seg_size - i) / middle
 
     def speed_func(i):
         accel_n = int(seg_size * 0.2)
@@ -83,7 +67,7 @@ def generate_train_sample(
 
     def generate_segment():
         return [
-            LabeledFeature(features=[speed_func(i), dist_func(i)], label=0)
+            LabeledFeature(features=[speed_func(i)], label=0)
             for i in range(seg_size)
         ]
 
@@ -93,12 +77,8 @@ def generate_train_sample(
 def generate_walk_sample(avg_speed=AVG_WALK_SPEED, seq_size=100):
     return Sample(
         [
-            LabeledFeature(features=[s, d * 10000], label=1)
-            for s, d in zip(
-                np.random.normal(avg_speed, avg_speed / 2, seq_size),
-                # distance is completely random between 0 and 10000 for now
-                np.random.rand(seq_size),
-            )
+            LabeledFeature(features=[s], label=1)
+            for s in [avg_speed]*seq_size
         ]
     )
 
