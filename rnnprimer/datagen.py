@@ -44,7 +44,7 @@ class Sample:
         return fig
 
 
-def generate_sample(train_seg_size=100, outlier_prob=0.0):
+def generate_sample(train_seg_size=100, total_train_seg_n=5, walk_level=0.5, outlier_prob=0.0):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
             return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
@@ -54,7 +54,7 @@ def generate_sample(train_seg_size=100, outlier_prob=0.0):
         accel_n = int(train_seg_size * 0.2)
         if i < accel_n:
             return (i * AVG_TRAIN_SPEED) / accel_n
-        elif i > train_seg_size - accel_n:
+        elif i >= train_seg_size - accel_n:
             return ((train_seg_size - i) * AVG_TRAIN_SPEED) / accel_n
         else:
             return AVG_TRAIN_SPEED
@@ -70,12 +70,12 @@ def generate_sample(train_seg_size=100, outlier_prob=0.0):
             LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
         ]
 
-    total_seg_size = train_seg_size*10
-    # generate 5 train segments split between a walk
-    train_seg_N1 = int(np.random.randint(1, 5))
-    train_seg_N2 = 5 - train_seg_N1
-    start_walk_size = np.random.randint(1, int(total_seg_size/2))
-    end_walk_size = total_seg_size - 5*train_seg_size - start_walk_size
+    total_walk = int(train_seg_size*total_train_seg_n*2*walk_level)
+    # generate total_train_seg_n train segments split between a walk
+    train_seg_N1 = np.random.randint(0, total_train_seg_n)
+    train_seg_N2 = total_train_seg_n - train_seg_N1
+    start_walk_size = np.random.randint(0, total_walk)
+    end_walk_size = total_walk - start_walk_size
 
     return Sample(
         generate_walk_segment(start_walk_size)
