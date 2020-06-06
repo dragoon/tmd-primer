@@ -62,7 +62,7 @@ def generate_sample(train_seg_size=100, total_train_seg_n=5, walk_level=0.5, out
     def generate_train_segment():
         return [
             LabeledFeature(features=[train_speed_func(i)], label=0)
-            for i in range(train_seg_size)
+            for i in range(train_seg_size + 1)
         ]
 
     def generate_walk_segment(seq_size):
