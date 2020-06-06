@@ -44,42 +44,7 @@ class Sample:
         return fig
 
 
-def generate_sample(
-    segments=5, train_seg_size=100, walk_seg_size=100, outlier_prob=0.0
-):
-    def outlier_replace(lf: LabeledFeature):
-        if np.random.rand() <= outlier_prob:
-            return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
-        return lf
-
-    def train_speed_func(i):
-        accel_n = int(train_seg_size * 0.2)
-        if i < accel_n:
-            return (i * AVG_TRAIN_SPEED) / accel_n
-        elif i > train_seg_size - accel_n:
-            return ((train_seg_size - i) * AVG_TRAIN_SPEED) / accel_n
-        else:
-            return AVG_TRAIN_SPEED
-
-    def generate_train_segment():
-        return [
-            LabeledFeature(features=[train_speed_func(i)], label=0)
-            for i in range(train_seg_size)
-        ]
-
-    def generate_walk_segment(seq_size=walk_seg_size):
-        return [
-            LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
-        ]
-
-    return Sample(
-        generate_walk_segment()
-        + [outlier_replace(lf) for lf in generate_train_segment() * segments]
-        + generate_walk_segment()
-    )
-
-
-def generate_random_sample(train_seg_size=100, outlier_prob=0.0):
+def generate_sample(train_seg_size=100, outlier_prob=0.0):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
             return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
@@ -127,28 +92,12 @@ class Dataset:
 
     @staticmethod
     def generate(
-        n_samples=100, walk_seq_size=250, train_seg_size=100, train_outlier_prob=0.0
-    ):
-        samples = []
-        for _ in range(n_samples):
-            samples.append(
-                generate_sample(
-                    train_seg_size=train_seg_size,
-                    walk_seg_size=walk_seq_size,
-                    outlier_prob=train_outlier_prob,
-                )
-            )
-
-        return Dataset(samples, StandardScaler())
-
-    @staticmethod
-    def generate_random(
             n_samples=100, train_seg_size=100, train_outlier_prob=0.0
     ):
         samples = []
         for _ in range(n_samples):
             samples.append(
-                generate_random_sample(
+                generate_sample(
                     train_seg_size=train_seg_size,
                     outlier_prob=train_outlier_prob,
                 )
