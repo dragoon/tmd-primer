@@ -13,6 +13,6 @@ I'm using the following classification task throughout the examples:
 The data is generated synthetically based on the common sense assumptions (see first notebook for details).
 
 ## List of notebooks
-* [RNN Basics](rnnprimer/RNN Basics.ipynb): Introduction to how data are generated. Showcases the advantages of an RNN model (GRU) over a Random Forest model on equal size samples.
+* [RNN Basics](rnnprimer/RNN%20Basics.ipynb): Introduction to how data are generated. Showcases the advantages of an RNN model (GRU) over a Random Forest model on equal size samples.
 * Generating data samples of different sizes. Padding samples in RNN model.
 * Generating data samples with different class proportions. Weights in the RNN model. 
