@@ -51,18 +51,19 @@ def generate_sample(train_seg_size=100, total_train_seg_n=5, walk_level=0.5, out
         return lf
 
     def train_speed_func(i):
-        accel_n = int(train_seg_size * 0.2)
+        max_ix = train_seg_size - 1
+        accel_n = int(max_ix * 0.2)
         if i < accel_n:
             return (i * AVG_TRAIN_SPEED) / accel_n
-        elif i >= train_seg_size - accel_n:
-            return ((train_seg_size - i) * AVG_TRAIN_SPEED) / accel_n
+        elif i >= max_ix - accel_n:
+            return ((max_ix - i) * AVG_TRAIN_SPEED) / accel_n
         else:
             return AVG_TRAIN_SPEED
 
     def generate_train_segment():
         return [
             LabeledFeature(features=[train_speed_func(i)], label=0)
-            for i in range(train_seg_size + 1)
+            for i in range(train_seg_size)
         ]
 
     def generate_walk_segment(seq_size):
