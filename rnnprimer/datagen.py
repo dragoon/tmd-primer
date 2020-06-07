@@ -93,7 +93,8 @@ class Dataset:
 
     @staticmethod
     def generate(
-            n_samples=100, train_seg_size=100, train_outlier_prob=0.0
+            n_samples=100, train_seg_size=100, train_outlier_prob=0.0,
+            total_train_seg=lambda: 5
     ):
         samples = []
         for _ in range(n_samples):
@@ -101,6 +102,7 @@ class Dataset:
                 generate_sample(
                     train_seg_size=train_seg_size,
                     outlier_prob=train_outlier_prob,
+                    total_train_seg_n=total_train_seg()
                 )
             )
 
