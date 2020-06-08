@@ -6,7 +6,7 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import tensorflow as tf
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 AVG_WALK_SPEED = 5
 AVG_TRAIN_SPEED = 100
@@ -89,7 +89,7 @@ def generate_sample(train_seg_size=100, total_train_seg_n=5, walk_level=0.5, out
 @dataclass
 class Dataset:
     samples: List[Sample]
-    std_scaler: StandardScaler
+    std_scaler: MinMaxScaler
 
     @staticmethod
     def generate(
@@ -106,7 +106,7 @@ class Dataset:
                 )
             )
 
-        return Dataset(samples, StandardScaler())
+        return Dataset(samples, MinMaxScaler())
 
     def _get_flat_features(self) -> List[LabeledFeature]:
         return list(chain.from_iterable(s.features for s in self.samples))
@@ -143,13 +143,12 @@ class Dataset:
     def to_tfds(self, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
         self.std_scaler.fit(X)
+        feature_n = len(X[0])
 
         return (
             tf.data.Dataset.from_generator(
                 lambda: self._get_ndarray(),
                 (tf.float32, tf.int32),
-                output_shapes=(None, None),
             )
-            .shuffle(1000)
-            .batch(batch_size)
+            .padded_batch(batch_size, padding_values=(-1.0, 0), padded_shapes=([None, feature_n], [None, 1]))
         )
