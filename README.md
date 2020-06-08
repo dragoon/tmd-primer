@@ -14,5 +14,5 @@ The data is generated synthetically based on the common sense assumptions (see f
 
 ## List of notebooks
 * [RNN Basics](rnnprimer/RNN%20Basics.ipynb): Introduction to how data are generated. Showcases the advantages of an RNN model (GRU) over a Random Forest model on equal size samples.
-* Generating data samples of different sizes. Padding samples in RNN model.
+* [RNN padding and masking](rnnprimer/RNN%20padding%20and%20masking.ipynb): Generating data samples of different sizes. Padding samples in RNN model.
 * Generating data samples with different class proportions. Weights in the RNN model. 
