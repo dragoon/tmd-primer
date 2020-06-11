@@ -1,10 +1,9 @@
 from itertools import chain
-from typing import List, Iterable, Tuple
+from typing import List, Iterable, Tuple, Dict
 from dataclasses import dataclass
 
 import numpy as np
-from plotly.subplots import make_subplots
-import plotly.graph_objects as go
+import altair as alt
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
 
@@ -29,19 +28,13 @@ class Sample:
         return [(fw.features, fw.label) for fw in self.features]
 
     def get_figure(self):
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        speeds = [lf.features[0] for lf in self.features]
+        import pandas as pd
+        df = pd.DataFrame(data=({"time step": i, "speed": lf.features[0]} for i, lf in enumerate(self.features)))
 
-        fig.add_trace(
-            go.Scatter(x=list(range(len(self))), y=speeds, name="speed"),
-            secondary_y=True,
+        return alt.Chart(df).mark_line().encode(
+            x='time step',
+            y='speed'
         )
-
-        # Set x-axis title
-        fig.update_xaxes(title_text="time step")
-        # Set y-axes titles
-        fig.update_yaxes(title_text="speed")
-        return fig
 
 
 def generate_sample(train_seg_size=100, total_train_seg_n=5, walk_level=0.5, outlier_prob=0.0):
