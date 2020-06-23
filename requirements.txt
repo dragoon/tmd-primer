@@ -1,5 +1,5 @@
 numpy
 tensorflow
-plotly
+altair
 pandas
 scikit-learn
