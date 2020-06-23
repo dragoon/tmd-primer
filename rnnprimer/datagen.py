@@ -140,6 +140,32 @@ class Dataset:
             for features, labels in self._get_sequences()
         )
 
+    def _get_weighted_ndarray(
+        self, weighting: Dict
+    ) -> Iterable[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        return (
+            (
+                self.std_scaler.transform(np.array(features, copy=True)),
+                np.expand_dims(np.array(labels), axis=-1),
+                np.array([weighting[l] for l in labels]),
+            )
+            for features, labels in self._get_sequences()
+        )
+
+    def to_weighted_tfds(self, weighting: Dict, batch_size=20):
+        X = [f.features for f in self._get_flat_features()]
+        self.std_scaler.fit(X)
+        feature_n = len(X[0])
+
+        return tf.data.Dataset.from_generator(
+            lambda: self._get_weighted_ndarray(weighting),
+            (tf.float32, tf.int32, tf.float32),
+        ).padded_batch(
+            batch_size,
+            padded_shapes=([None, feature_n], [None, 1], [None]),
+            padding_values=(-1.0, 0, 0.0),
+        )
+
     def to_tfds(self, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
         self.std_scaler.fit(X)
