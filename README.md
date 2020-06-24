@@ -19,4 +19,5 @@ The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the 
 3. [Basic RNN model](rnnprimer/RNN%20Basics.ipynb): Modelling the task using a simple RNN model (GRU).
 4. [RNN padding and masking](rnnprimer/RNN%20padding%20and%20masking.ipynb): Generating data samples of different sizes. Padding samples in RNN model.
 5. [RNN weights](rnnprimer/RNN%20weights.ipynb): Generating data samples with different class proportions. Weights in the RNN model.
-5. [Basic CNN model](rnnprimer/CNN%20Basics.ipynb):  Modelling the task using a 1D Convolutional NN model.
+6. [RNN truncated back-propagation](rnnprimer/RNN%20TBTT.ipynb): XXX
+7. [Basic CNN model](rnnprimer/CNN%20Basics.ipynb):  Modelling the task using a 1D Convolutional NN model.
