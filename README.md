@@ -1,6 +1,6 @@
 # Sequence classification with Neural Networks: a primer
 
-The examples in this repository demonstrate the advantages of RNNs and CNNs over traditional ML models on time-series data **with outliers**.
+This repository demonstrates the advantages of RNNs and CNNs over traditional ML models on time-series data **with outliers**.
 
 ## Task description
 We're going to use **transport mode detection task** as our running example.
@@ -10,7 +10,7 @@ For demonstration purposes, we will use only two modes, "walk" and "train", so t
 
 ## Data
 The data is generated synthetically based on common sense assumptions. Outliers in the data represent faulty sensor readings, which often happens in real life (wrong geo-positions, acceleration).
-Again, for simplicity, we are going to use a single variable representing the speed of a device.
+For simplicity, a single feature representing the speed of a device is used.
 The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the data generation methodology in detail.
 
 ## List of notebooks
