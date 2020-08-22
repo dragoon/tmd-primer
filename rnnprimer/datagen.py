@@ -1,4 +1,5 @@
 from itertools import chain
+import random
 from typing import List, Iterable, Tuple, Dict
 from dataclasses import dataclass
 
@@ -40,28 +41,49 @@ class Sample:
         return alt.Chart(df).mark_line().encode(x="time step", y="speed")
 
 
-def generate_sample(
-    train_seg_size=100, total_train_seg_n=5, walk_level=0.5, outlier_prob=0.0
-):
+def generate_sample(walk_proportion=0.5, outlier_prob=0.0):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
             return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
         return lf
 
-    def train_speed_func(i):
-        max_ix = train_seg_size - 1
-        accel_n = int(max_ix * 0.2)
-        if i < accel_n:
-            return (i * AVG_TRAIN_SPEED) / accel_n
-        elif i >= max_ix - accel_n:
-            return ((max_ix - i) * AVG_TRAIN_SPEED) / accel_n
+    def train_speed_func(train_seg_size):
+        time_to_max_speed = 20
+        if train_seg_size >= time_to_max_speed * 2:
+            return (
+                [
+                    i * AVG_TRAIN_SPEED / time_to_max_speed
+                    for i in range(time_to_max_speed)
+                ]
+                + [
+                    AVG_TRAIN_SPEED
+                    for _ in range(train_seg_size - time_to_max_speed * 2)
+                ]
+                + list(
+                    reversed(
+                        [
+                            i * AVG_TRAIN_SPEED / time_to_max_speed
+                            for i in range(time_to_max_speed)
+                        ]
+                    )
+                )
+            )
         else:
-            return AVG_TRAIN_SPEED
+            half_way_n = train_seg_size // 2
+            return [
+                i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)
+            ] + list(
+                reversed(
+                    [i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)]
+                )
+            )
 
     def generate_train_segment():
+        # always even number
+        train_seg_size = random.randrange(20, 101, 2)
         return [
-            LabeledFeature(features=[train_speed_func(i)], label=0)
-            for i in range(train_seg_size)
+            outlier_replace(LabeledFeature(features=[f], label=0))
+            for f in train_speed_func(train_seg_size)
         ]
 
     def generate_walk_segment(seq_size):
@@ -69,19 +91,25 @@ def generate_sample(
             LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
         ]
 
-    total_walk = int(train_seg_size * total_train_seg_n * 2 * walk_level)
-    # generate total_train_seg_n train segments split between a walk
-    train_seg_N1 = np.random.randint(0, total_train_seg_n)
-    train_seg_N2 = total_train_seg_n - train_seg_N1
-    start_walk_size = np.random.randint(0, total_walk)
-    end_walk_size = total_walk - start_walk_size
+    total_train_seg_n = np.random.randint(4, 10)
+    # split all train segments into two trips
+    train_seg_n1 = np.random.randint(0, total_train_seg_n)
+    train_seg_n2 = total_train_seg_n - train_seg_n1
+    train_seg1 = list(chain.from_iterable(generate_train_segment() for _ in range(train_seg_n1)))
+    train_seg2 = list(chain.from_iterable(generate_train_segment() for _ in range(train_seg_n2)))
 
-    return Sample(
-        generate_walk_segment(start_walk_size)
-        + [outlier_replace(lf) for lf in generate_train_segment() * train_seg_N1]
-        + generate_walk_segment(end_walk_size)
-        + [outlier_replace(lf) for lf in generate_train_segment() * train_seg_N2]
-    )
+    total_walk = int((len(train_seg1) + len(train_seg2)) * walk_proportion * 2)
+    walk_seg_n1 = np.random.randint(0, total_walk)
+    walk_seg_n2 = total_walk - walk_seg_n1
+    segments = [
+        train_seg1,
+        train_seg2,
+        generate_walk_segment(walk_seg_n1),
+        generate_walk_segment(walk_seg_n2),
+    ]
+    random.shuffle(segments)
+
+    return Sample(list(chain.from_iterable(segments)))
 
 
 @dataclass
@@ -90,21 +118,10 @@ class Dataset:
     std_scaler: MinMaxScaler
 
     @staticmethod
-    def generate(
-        n_samples=100,
-        train_seg_size=100,
-        train_outlier_prob=0.0,
-        total_train_seg=lambda: 5,
-    ):
+    def generate(n_samples=100, train_outlier_prob=0.0):
         samples = []
         for _ in range(n_samples):
-            samples.append(
-                generate_sample(
-                    train_seg_size=train_seg_size,
-                    outlier_prob=train_outlier_prob,
-                    total_train_seg_n=total_train_seg(),
-                )
-            )
+            samples.append(generate_sample(outlier_prob=train_outlier_prob))
 
         return Dataset(samples, MinMaxScaler())
 
@@ -179,13 +196,15 @@ class Dataset:
             padded_shapes=([None, feature_n], [None, 1]),
         )
 
-    def _get_strided_ndarray(self, window_size) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+    def _get_strided_ndarray(
+        self, window_size
+    ) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
         for feature_arr, label_arr in self._get_ndarray():
             # features is size (n_timesteps, feature_n=1)
             # labels is size (n_timesteps, 1)
             i = 0
             for stride_features in strided_axis0(feature_arr, window_size):
-                yield stride_features, [label_arr[i + window_size-1]]
+                yield stride_features, [label_arr[i + window_size - 1]]
                 i += 1
 
     def to_cnn_tfds(self, window_size, batch_size=20):
