@@ -18,6 +18,6 @@ The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the 
 2. [Basic Tree model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/Tree%20model.ipynb): Modelling the task using decision trees.
 3. [Basic RNN model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/RNN%20Basics.ipynb): Modelling the task using a simple Recurrent NN model (with GRU).
 4. [RNN padding and masking](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/RNN%20padding%20and%20masking.ipynb): Generating data samples of different sizes. Padding samples in RNN model.
-5. [RNN weights](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/RNN%20weights.ipynb): Generating data samples with different class proportions. Weights in the RNN model.
+5. [RNN class weights](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/RNN%20class%20weights.ipynb): Generating data samples with different class proportions. Class weights in the RNN model.
 6. [RNN truncated back-propagation](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/RNN%20TBTT.ipynb): XXX
 7. [Basic CNN model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/rnnprimer/CNN%20Basics.ipynb):  Modelling the task using a Convolutional NN model.
