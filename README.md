@@ -16,9 +16,9 @@ The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the 
 ## List of notebooks
 1. [Data generation](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/Data%20generation.ipynb): Describes the data and outlier generation methodology with examples.
 2. [Basic Tree model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/Tree%20model.ipynb): Modelling the task using decision trees.
-3. [Tree model with multiple time steps](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/Tree%20model%20advanced.ipynb): Decision tree that has access to past timesteps.
+3. [Tree model with multiple time steps: TODO](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/Tree%20model%20advanced.ipynb): Decision tree that has access to past timesteps.
 4. [Basic CNN model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/CNN%20Basics.ipynb):  Modelling the task using a Convolutional NN model.
 5. [Basic RNN model](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20Basics.ipynb): Modelling the task using a simple Recurrent NN model (with GRU).
 6. [RNN padding and masking](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20padding%20and%20masking.ipynb): Generating data samples of different sizes. Padding samples in RNN model.
-7. [RNN class weights](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20class%20weights.ipynb): Generating data samples with different class proportions. Class weights in the RNN model.
-8. [RNN truncated back-propagation](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20TBTT.ipynb): TODO
+7. [RNN class weights: TODO](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20class%20weights.ipynb): Generating data samples with different class proportions. Class weights in the RNN model.
+8. [RNN truncated back-propagation: TODO](https://nbviewer.jupyter.org/github/dragoon/rnn-primer/blob/master/tmdprimer/RNN%20TBTT.ipynb): TODO
