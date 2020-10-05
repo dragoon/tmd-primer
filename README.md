@@ -10,7 +10,7 @@ For demonstration purposes, we will use only two modes, "walk" and "train", so t
 
 ## Data
 The data is generated synthetically based on common sense assumptions. Outliers in the data represent faulty sensor readings, which often happens in real life (wrong geo-positions, acceleration).
-For simplicity, a single feature representing the speed of a device is used.
+For simplicity, **a single feature representing the speed of a device is used**.
 The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the data generation methodology in detail.
 
 ## List of notebooks
