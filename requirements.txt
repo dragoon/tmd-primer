@@ -1,5 +1,5 @@
 numpy
-tensorflow=2.2.0
+tensorflow=2.2.1
 altair
 pandas
 scikit-learn
