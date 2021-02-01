@@ -3,3 +3,4 @@ tensorflow=2.2.1
 altair
 pandas
 scikit-learn
+boto3
