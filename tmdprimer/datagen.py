@@ -28,6 +28,10 @@ class Sample:
     def labeled_features_tuples(self):
         return [(fw.features, fw.label) for fw in self.features]
 
+    def to_tfds(self) -> tf.data.Dataset:
+        features, labels = tuple(zip(*self.labeled_features_tuples()))
+        return tf.data.Dataset.from_tensor_slices((np.array(features), np.expand_dims(np.array(labels), axis=-1)))
+
     def get_figure(self):
         import pandas as pd
 
@@ -170,22 +174,20 @@ class Dataset:
             padded_shapes=([None, feature_n], [None, 1]),
         )
 
-    def _get_strided_ndarray(self, window_size) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
-        for feature_arr, label_arr in self._get_ndarray():
-            # features is size (n_timesteps, feature_n=1)
-            # labels is size (n_timesteps, 1)
-            i = 0
-            for stride_features in make_sliding_windows(feature_arr, window_size, overlap_size=window_size - 1):
-                yield stride_features, [label_arr[i + window_size - 1]]
-                i += 1
-
     def to_cnn_tfds(self, window_size, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
         self.std_scaler.fit(X)
 
+        def flat_zip(x, y):
+            return tf.data.Dataset.zip(
+                (x.batch(window_size, drop_remainder=True), y.batch(window_size, drop_remainder=True))
+            )
+
         return tf.data.Dataset.from_generator(
-            lambda: self._get_strided_ndarray(window_size),
-            (tf.float32, tf.int32),
+            lambda: chain.from_iterable(
+                s.to_tfds().window(window_size, shift=1, drop_remainder=True).flat_map(flat_zip) for s in self.samples
+            ),
+            output_types=(tf.float32, tf.int32),
         ).batch(batch_size)
 
 
