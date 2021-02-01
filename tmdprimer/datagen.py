@@ -31,12 +31,7 @@ class Sample:
     def get_figure(self):
         import pandas as pd
 
-        df = pd.DataFrame(
-            data=(
-                {"time step": i, "speed": lf.features[0]}
-                for i, lf in enumerate(self.features)
-            )
-        )
+        df = pd.DataFrame(data=({"time step": i, "speed": lf.features[0]} for i, lf in enumerate(self.features)))
 
         return alt.Chart(df).mark_line().encode(x="time step", y="speed")
 
@@ -44,52 +39,35 @@ class Sample:
 def generate_sample(walk_proportion=0.5, outlier_prob=0.0):
     def outlier_replace(lf: LabeledFeature):
         if np.random.rand() <= outlier_prob:
-            return LabeledFeature(features=[AVG_WALK_SPEED,], label=lf.label,)
+            return LabeledFeature(
+                features=[
+                    AVG_WALK_SPEED,
+                ],
+                label=lf.label,
+            )
         return lf
 
     def train_speed_func(train_seg_size):
         time_to_max_speed = 20
         if train_seg_size >= time_to_max_speed * 2:
             return (
-                [
-                    i * AVG_TRAIN_SPEED / time_to_max_speed
-                    for i in range(time_to_max_speed)
-                ]
-                + [
-                    AVG_TRAIN_SPEED
-                    for _ in range(train_seg_size - time_to_max_speed * 2)
-                ]
-                + list(
-                    reversed(
-                        [
-                            i * AVG_TRAIN_SPEED / time_to_max_speed
-                            for i in range(time_to_max_speed)
-                        ]
-                    )
-                )
+                [i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(time_to_max_speed)]
+                + [AVG_TRAIN_SPEED for _ in range(train_seg_size - time_to_max_speed * 2)]
+                + list(reversed([i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(time_to_max_speed)]))
             )
         else:
             half_way_n = train_seg_size // 2
-            return [
-                i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)
-            ] + list(
-                reversed(
-                    [i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)]
-                )
+            return [i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)] + list(
+                reversed([i * AVG_TRAIN_SPEED / time_to_max_speed for i in range(half_way_n)])
             )
 
     def generate_train_segment():
         # always even number
         train_seg_size = random.randrange(20, 101, 2)
-        return [
-            outlier_replace(LabeledFeature(features=[f], label=0))
-            for f in train_speed_func(train_seg_size)
-        ]
+        return [outlier_replace(LabeledFeature(features=[f], label=0)) for f in train_speed_func(train_seg_size)]
 
     def generate_walk_segment(seq_size):
-        return [
-            LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size
-        ]
+        return [LabeledFeature(features=[s], label=1) for s in [AVG_WALK_SPEED] * seq_size]
 
     total_train_seg_n = np.random.randint(4, 10)
     # split all train segments into two trips
@@ -157,9 +135,7 @@ class Dataset:
             for features, labels in self._get_sequences()
         )
 
-    def _get_weighted_ndarray(
-        self, weighting: Dict
-    ) -> Iterable[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    def _get_weighted_ndarray(self, weighting: Dict) -> Iterable[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         return (
             (
                 self.std_scaler.transform(np.array(features, copy=True)),
@@ -188,22 +164,18 @@ class Dataset:
         self.std_scaler.fit(X)
         feature_n = len(X[0])
 
-        return tf.data.Dataset.from_generator(
-            lambda: self._get_ndarray(), (tf.float32, tf.int32),
-        ).padded_batch(
+        return tf.data.Dataset.from_generator(lambda: self._get_ndarray(), (tf.float32, tf.int32),).padded_batch(
             batch_size,
             padding_values=(-1.0, 0),
             padded_shapes=([None, feature_n], [None, 1]),
         )
 
-    def _get_strided_ndarray(
-        self, window_size
-    ) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+    def _get_strided_ndarray(self, window_size) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
         for feature_arr, label_arr in self._get_ndarray():
             # features is size (n_timesteps, feature_n=1)
             # labels is size (n_timesteps, 1)
             i = 0
-            for stride_features in strided_axis0(feature_arr, window_size):
+            for stride_features in make_sliding_windows(feature_arr, window_size, overlap_size=window_size - 1):
                 yield stride_features, [label_arr[i + window_size - 1]]
                 i += 1
 
@@ -212,24 +184,36 @@ class Dataset:
         self.std_scaler.fit(X)
 
         return tf.data.Dataset.from_generator(
-            lambda: self._get_strided_ndarray(window_size), (tf.float32, tf.int32),
+            lambda: self._get_strided_ndarray(window_size),
+            (tf.float32, tf.int32),
         ).batch(batch_size)
 
 
-def strided_axis0(a: np.array, L: int):
-    """
-    https://stackoverflow.com/questions/43413582/selecting-multiple-slices-from-a-numpy-array-at-once/43413801#43413801
-    :param a: array
-    :param L: length of array along axis=0 to be cut for forming each subarray
-    :return:
-    """
+def make_sliding_windows(data, window_size, overlap_size=0, flatten_inside_window=True):
+    assert data.ndim == 1 or data.ndim == 2
+    if data.ndim == 1:
+        data = data.reshape((-1, 1))
 
-    # Length of 3D output array along its axis=0
-    nd0 = a.shape[0] - L + 1
+    # get the number of overlapping windows that fit into the data
+    num_windows = (data.shape[0] - window_size) // (window_size - overlap_size) + 1
+    overhang = data.shape[0] - (num_windows * window_size - (num_windows - 1) * overlap_size)
 
-    # Store shape and strides info
-    m, n = a.shape
-    s0, s1 = a.strides
+    # if there's overhang, need an extra window and a zero pad on the data
+    # (numpy 1.7 has a nice pad function I'm not using here)
+    if overhang != 0:
+        num_windows += 1
+        newdata = np.zeros((num_windows * window_size - (num_windows - 1) * overlap_size, data.shape[1]))
+        newdata[: data.shape[0]] = data
+        data = newdata
 
-    # Finally use strides to get the 3D array view
-    return np.lib.stride_tricks.as_strided(a, shape=(nd0, L, n), strides=(s0, s0, s1))
+    sz = data.dtype.itemsize
+    ret = np.lib.stride_tricks.as_strided(
+        data,
+        shape=(num_windows, window_size * data.shape[1]),
+        strides=((window_size - overlap_size) * data.shape[1] * sz, sz),
+    )
+
+    if flatten_inside_window:
+        return ret
+    else:
+        return ret.reshape((num_windows, -1, data.shape[1]))
