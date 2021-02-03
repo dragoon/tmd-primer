@@ -70,7 +70,7 @@ class DVDTFile:
         # dataX = df[["linear_accel_norm", "rolling_linear"]].dropna().to_numpy()
         return input_data.rolling(window_size).quantile(quantile)
 
-    def to_tfds(self, label, stop_label=0, window_size=512) -> tf.data.Dataset:
+    def _windows_x_y(self, label, stop_label, window_size):
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel()
         data_x = linear_accel_norm.to_numpy()
@@ -83,7 +83,26 @@ class DVDTFile:
         windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         # now we need to select a single label for a window based on the mix of labels in it
         windows_y = np.median(windows_y, axis=1).astype(int)
+        return windows_x, windows_y
 
+    def to_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
+        windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
+        return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
+
+    def to_cnn_tfds(self, label, window_size, n_steps, stop_label=0,):
+        """
+
+        :param label:
+        :param stop_label:
+        :param window_size:
+        :param n_steps: should be able to divide window_size by n_steps with no remainder
+        :return:
+        """
+        windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
+        if window_size % n_steps != 0:
+            raise Exception("Window_size should divide by n_steps without remainder")
+        n_length = window_size / n_steps
+        windows_x = windows_x.reshape((windows_x.shape[0], n_steps, n_length, windows_x.shape[2]))
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
 
