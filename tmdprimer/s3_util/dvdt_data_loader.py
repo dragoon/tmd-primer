@@ -65,6 +65,11 @@ class DVDTFile:
         linear_accel_norm = (clipped_accel - np.min(clipped_accel)) / (np.max(clipped_accel) - np.min(clipped_accel))
         return linear_accel_norm
 
+    @staticmethod
+    def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
+        # dataX = df[["linear_accel_norm", "rolling_linear"]].dropna().to_numpy()
+        return input_data.rolling(window_size).quantile(quantile)
+
     def to_tfds(self, label, stop_label=0, window_size=512) -> tf.data.Dataset:
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel()
@@ -76,6 +81,9 @@ class DVDTFile:
 
         windows_x = make_sliding_windows(data_x, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        # now we need to select a single label for a window based on the mix of labels in it
+        windows_y = np.median(windows_y, axis=1).astype(int)
+
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
 
