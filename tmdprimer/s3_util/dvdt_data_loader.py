@@ -62,7 +62,7 @@ class DVDTFile:
         # clip to 0 - 25
         clipped_accel = np.clip(linear_accel_series, 0, 25)
         # make accel between 0 and 1
-        linear_accel_norm = (clipped_accel - np.min(clipped_accel)) / (np.max(clipped_accel) - np.min(clipped_accel))
+        linear_accel_norm = clipped_accel / 25
         return linear_accel_norm
 
     @staticmethod
