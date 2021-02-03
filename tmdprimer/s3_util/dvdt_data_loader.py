@@ -98,10 +98,7 @@ class DVDTDataset:
         result = []
         for label in labels_to_load:
             for file_name in file_label_mapping[label]:
-                try:
-                    result.append(self._load_dvdt_file(file_name))
-                except:
-                    print("could not load", file_name)
+                result.append(self._load_dvdt_file(file_name))
         return result
 
     def _load_dvdt_file(self, file_name) -> DVDTFile:
