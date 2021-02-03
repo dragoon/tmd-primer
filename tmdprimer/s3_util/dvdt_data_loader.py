@@ -12,6 +12,8 @@ import boto3
 
 from tmdprimer.datagen import make_sliding_windows
 
+STOP_LABEL = "stop"
+
 
 @dataclass
 class AnnotatedStop:
@@ -52,7 +54,7 @@ class DVDTFile:
         # add labels to the df
         df["label"] = transport_mode
         for st in json_dict["stops"]:
-            df.loc[(df["timestamp"] < st["endTime"]) & (df["timestamp"] > st["startTime"]), "label"] = "stop"
+            df.loc[(df["timestamp"] < st["endTime"]) & (df["timestamp"] > st["startTime"]), "label"] = STOP_LABEL
         return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
 
     def _get_linear_accel(self):
@@ -63,12 +65,17 @@ class DVDTFile:
         linear_accel_norm = (clipped_accel - np.min(clipped_accel)) / (np.max(clipped_accel) - np.min(clipped_accel))
         return linear_accel_norm
 
-    def to_tfds(self, label, window_size=512) -> tf.data.Dataset:
+    def to_tfds(self, label, stop_label=0, window_size=512) -> tf.data.Dataset:
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel()
         data_x = linear_accel_norm.to_numpy()
+        # transform label values to integers
+        labels = (
+            self.df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=False).to_numpy()
+        )
+
         windows_x = make_sliding_windows(data_x, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
-        windows_y = np.full((len(windows_x),), [label])
+        windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
 
