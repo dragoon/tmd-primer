@@ -67,19 +67,22 @@ class DVDTFile:
 
     @staticmethod
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
-        # dataX = df[["linear_accel_norm", "rolling_linear"]].dropna().to_numpy()
         return input_data.rolling(window_size).quantile(quantile)
 
     def _windows_x_y(self, label, stop_label, window_size):
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel()
-        data_x = linear_accel_norm.to_numpy()
-        # transform label values to integers
-        labels = (
-            self.df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=False).to_numpy()
-        )
+        rolling_accel = self._get_rolling_quantile_accel(window_size, 0.5, linear_accel_norm)
+        df = pd.DataFrame({"rolling": rolling_accel, "linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
-        windows_x = make_sliding_windows(data_x, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        # transform label values to integers
+        labels = df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=False).to_numpy()
+
+        # fmt: off
+        windows_x = make_sliding_windows(
+            df[["linear", ]].to_numpy(), window_size, overlap_size=window_size - 1, flatten_inside_window=False
+        )
+        # fmt: on
         windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         # now we need to select a single label for a window based on the mix of labels in it
         windows_y = np.median(windows_y, axis=1).astype(int)
@@ -89,9 +92,14 @@ class DVDTFile:
         windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
-    def to_cnn_tfds(self, label, window_size, n_steps, stop_label=0,):
+    def to_cnn_tfds(
+        self,
+        label,
+        window_size,
+        n_steps,
+        stop_label=0,
+    ):
         """
-
         :param label:
         :param stop_label:
         :param window_size:
