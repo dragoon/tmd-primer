@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Iterable, List
 
 import numpy as np
@@ -24,6 +24,10 @@ class AnnotatedStop:
         end_time = datetime.fromtimestamp(json_dict["endTime"] / 1000)
         return AnnotatedStop(start_time, end_time)
 
+    @property
+    def duration(self) -> timedelta:
+        return self.end_time - self.start_time
+
 
 @dataclass
 class DVDTFile:
@@ -45,6 +49,10 @@ class DVDTFile:
         comment = metadata["comment"]
         annotated_stops = [AnnotatedStop.from_json(s) for s in json_dict["stops"]]
         df = pd.DataFrame(json_dict["entries"])
+        # add labels to the df
+        df["label"] = transport_mode
+        for st in json_dict["stops"]:
+            df.loc[(df["timestamp"] < st["endTime"]) & (df["timestamp"] > st["startTime"]), "label"] = "stop"
         return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
 
     def _get_linear_accel(self):
