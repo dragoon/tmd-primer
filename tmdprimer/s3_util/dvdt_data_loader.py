@@ -101,7 +101,7 @@ class DVDTFile:
         windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
         if window_size % n_steps != 0:
             raise Exception("Window_size should divide by n_steps without remainder")
-        n_length = window_size / n_steps
+        n_length = window_size // n_steps
         windows_x = windows_x.reshape((windows_x.shape[0], n_steps, n_length, windows_x.shape[2]))
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
