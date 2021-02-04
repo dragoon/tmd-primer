@@ -9,6 +9,7 @@ import pandas as pd
 import io
 from zipfile import ZipFile
 import boto3
+import altair as alt
 
 from tmdprimer.datagen import make_sliding_windows
 
@@ -57,10 +58,13 @@ class DVDTFile:
             df.loc[(df["timestamp"] < st["endTime"]) & (df["timestamp"] > st["startTime"]), "label"] = STOP_LABEL
         return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
 
-    def _get_linear_accel(self):
-        linear_accel_series = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
+    def __post_init__(self):
+        self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
+        self.df["time"] = pd.to_datetime(self.df["timestamp"], unit="ms")
+
+    def _get_linear_accel_norm(self):
         # clip to 0 - 25
-        clipped_accel = np.clip(linear_accel_series, 0, 25)
+        clipped_accel = np.clip(self.df["linear_accel"], 0, 25)
         # make accel between 0 and 1
         linear_accel_norm = clipped_accel / 25
         return linear_accel_norm
@@ -71,7 +75,7 @@ class DVDTFile:
 
     def _windows_x_y(self, label, stop_label, window_size):
         time_diff_series = self.df["timestamp"].diff()
-        linear_accel_norm = self._get_linear_accel()
+        linear_accel_norm = self._get_linear_accel_norm()
         rolling_accel = self._get_rolling_quantile_accel(window_size, 0.5, linear_accel_norm)
         df = pd.DataFrame({"rolling": rolling_accel, "linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
@@ -112,6 +116,16 @@ class DVDTFile:
         n_length = window_size // n_steps
         windows_x = windows_x.reshape((windows_x.shape[0], n_steps, n_length, windows_x.shape[2]))
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
+
+    def get_figure(self, width=800, height=600):
+
+        self.df['label_int'] = self.df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=False)
+        alt.data_transformers.disable_max_rows()
+        base = alt.Chart(self.df).encode(x="time")
+
+        return alt.layer(
+            base.mark_line(color="blue").encode(y="linear_accel"), base.mark_line(color="red").encode(y="label_int")
+        ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
 
 class DVDTDataset:
