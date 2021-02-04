@@ -127,7 +127,7 @@ class DVDTFile:
 
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
-            base.mark_line(color="orange").encode(y="label_int"),
+            base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
 
