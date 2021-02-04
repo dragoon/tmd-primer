@@ -118,15 +118,16 @@ class DVDTFile:
         return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
 
     def get_figure(self, width=800, height=600):
-        df = self.df[['label', 'linear_accel', 'time']].copy()
+        df = self.df[["label", "linear_accel", "time"]].copy()
         # add median filter accel
-        df['median_filter_accel'] = df['linear_accel'].rolling(10, center=True).median()
+        df["median_filter_accel"] = df["linear_accel"].rolling(10, center=True).median()
         df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
         alt.data_transformers.disable_max_rows()
         base = alt.Chart(df).encode(x="time")
 
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
+            base.mark_line(color="mistyrose").encode(y="median_filter_accel"),
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
