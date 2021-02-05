@@ -73,11 +73,10 @@ class DVDTFile:
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def _windows_x_y(self, label, stop_label, window_size):
+    def _windows_x_y(self, label: int, stop_label: int, window_size: int):
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel_norm()
-        rolling_accel = self._get_rolling_quantile_accel(window_size, 0.5, linear_accel_norm)
-        df = pd.DataFrame({"rolling": rolling_accel, "linear": linear_accel_norm, "label": self.df["label"]}).dropna()
+        df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
         # transform label values to integers
         labels = df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=False).to_numpy()
@@ -92,7 +91,7 @@ class DVDTFile:
         windows_y = np.array([x[-1] for x in windows_y], dtype=int)
         return windows_x, windows_y
 
-    def get_features_labels(self, label, stop_label, median_filter_window=10) -> (np.ndarray, np.ndarray):
+    def get_features_labels(self, label: int, stop_label: int, median_filter_window=10) -> (np.ndarray, np.ndarray):
         """
         :param label:
         :param stop_label:
@@ -117,6 +116,21 @@ class DVDTFile:
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),
+        ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    def predict_figure(self, model: tf.keras.Model, window_size: int, width=800, height=600):
+        df = self.df[["label", "linear_accel", "time"]].copy()
+        df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
+        alt.data_transformers.disable_max_rows()
+        base = alt.Chart(df).encode(x="time")
+        x, y = self._windows_x_y(label=1, stop_label=0, window_size=window_size)
+        pred_y = model.predict(x)
+        df.loc[:, 'pred_label'] = pd.Series(pred_y.flatten())
+        df.fillna(1)
+        return alt.layer(
+            base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
+            base.mark_line(color="orange").encode(y="label"),
+            base.mark_line(color="red").encode(y="pred_label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
 
@@ -171,6 +185,3 @@ class DVDTDataset:
                     if file.endswith(".json") and "/" not in file:
                         with zip_file.open(file) as accel_json:
                             return DVDTFile.from_json(json.loads(accel_json.read()))
-
-    def predict(self, model: tf.keras.Model):
-        pass
