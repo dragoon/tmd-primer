@@ -50,7 +50,7 @@ class DVDTFile:
         num_stations = metadata["numberStations"]
         transport_mode = metadata["transportMode"]
         comment = metadata["comment"]
-        annotated_stops = [AnnotatedStop.from_json(s) for s in json_dict["stops"]]
+        annotated_stops = [AnnotatedStop.from_json(s) for s in json_dict.get("stops", [])]
         df = pd.DataFrame(json_dict["entries"])
         # add labels to the df
         df["label"] = transport_mode
@@ -110,15 +110,12 @@ class DVDTFile:
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()
-        # add median filter accel
-        df["median_filter_accel"] = df["linear_accel"].rolling(10, center=True).median()
         df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
         alt.data_transformers.disable_max_rows()
         base = alt.Chart(df).encode(x="time")
 
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
-            base.mark_line(color="mistyrose").encode(y="median_filter_accel"),
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
@@ -174,3 +171,6 @@ class DVDTDataset:
                     if file.endswith(".json") and "/" not in file:
                         with zip_file.open(file) as accel_json:
                             return DVDTFile.from_json(json.loads(accel_json.read()))
+
+    def predict(self, model: tf.keras.Model):
+        pass
