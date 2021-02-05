@@ -54,7 +54,7 @@ class DVDTFile:
         df = pd.DataFrame(json_dict["entries"])
         # add labels to the df
         df["label"] = transport_mode
-        for st in json_dict["stops"]:
+        for st in json_dict.get("stops", []):
             df.loc[(df["timestamp"] <= st["endTime"]) & (df["timestamp"] >= st["startTime"]), "label"] = STOP_LABEL
         return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
 
