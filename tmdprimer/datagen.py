@@ -191,12 +191,13 @@ class Dataset:
 
     def to_cnn_tfds(self, window_size, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
+        feature_n = len(X[0])
         self.std_scaler.fit(X)
 
         return tf.data.Dataset.from_generator(
             lambda: self._get_strided_ndarray(window_size),
             output_signature=(
-                tf.TensorSpec(shape=(window_size,), dtype=tf.float32),
+                tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
                 tf.TensorSpec(shape=(1, 1), dtype=tf.int32),
             ),
         ).batch(batch_size)
