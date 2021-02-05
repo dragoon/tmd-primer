@@ -55,7 +55,7 @@ class DVDTFile:
         # add labels to the df
         df["label"] = transport_mode
         for st in json_dict["stops"]:
-            df.loc[(df["timestamp"] < st["endTime"]) & (df["timestamp"] > st["startTime"]), "label"] = STOP_LABEL
+            df.loc[(df["timestamp"] <= st["endTime"]) & (df["timestamp"] >= st["startTime"]), "label"] = STOP_LABEL
         return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
 
     def __post_init__(self):
@@ -88,34 +88,25 @@ class DVDTFile:
         )
         # fmt: on
         windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
-        # now we need to select a single label for a window based on the mix of labels in it
-        windows_y = np.median(windows_y, axis=1).astype(int)
+        # now we need to select a single label for a window  -- last label since that's what we will be predicting
+        windows_y = np.array([x[-1] for x in windows_y], dtype=int)
         return windows_x, windows_y
 
-    def to_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
-        windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
-        return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
-
-    def to_cnn_tfds(
-        self,
-        label,
-        window_size,
-        n_steps,
-        stop_label=0,
-    ):
+    def get_features_labels(self, label, stop_label, median_filter_window=10) -> (np.ndarray, np.ndarray):
         """
         :param label:
         :param stop_label:
-        :param window_size:
-        :param n_steps: should be able to divide window_size by n_steps with no remainder
-        :return:
+        :param median_filter_window: size of the median filter window for pre-processing
+        :return: feature and label arrays for the file
         """
-        windows_x, windows_y = self._windows_x_y(label, stop_label, window_size)
-        if window_size % n_steps != 0:
-            raise Exception("Window_size should divide by n_steps without remainder")
-        n_length = window_size // n_steps
-        windows_x = windows_x.reshape((windows_x.shape[0], n_steps, n_length, windows_x.shape[2]))
-        return tf.data.Dataset.from_tensor_slices((windows_x, windows_y))
+        df = self.df[["label", "linear_accel"]].copy()
+        df["linear_accel_norm"] = self._get_linear_accel_norm()
+        df["median_filter_accel"] = df["linear_accel_norm"].rolling(median_filter_window, center=True).median()
+        df = df.dropna()
+        df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=True)
+        # fmt: off
+        return df[["median_filter_accel", ]].to_numpy(), df[["label", ]].to_numpy()
+        # fmt: on
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()
@@ -135,12 +126,14 @@ class DVDTFile:
 class DVDTDataset:
     s3client = None
     bucket: str
+    dvdt_files: List[DVDTFile]
 
-    def __init__(self, bucket: str):
+    def __init__(self, bucket: str, prefix: str, labels_to_load: Iterable = None):
         self.s3client = boto3.client("s3")
         self.bucket = bucket
+        self.dvdt_files = self._get_dataset(prefix, labels_to_load)
 
-    def get_dataset(self, prefix: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
+    def _get_dataset(self, prefix: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
         file_label_mapping = {}
         for entry in self.s3client.list_objects(Bucket=self.bucket, Prefix=prefix)["Contents"]:
             key = entry["Key"]
@@ -160,6 +153,15 @@ class DVDTDataset:
             for file_name in file_label_mapping[label]:
                 result.append(self._load_dvdt_file(file_name))
         return result
+
+    def to_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
+        x = []
+        y = []
+        for f in self.dvdt_files:
+            windows_x, windows_y = f._windows_x_y(label, stop_label, window_size)
+            x.append(windows_x)
+            y.append(windows_y)
+        return tf.data.Dataset.from_tensor_slices((np.concatenate(x), np.concatenate(y)))
 
     def _load_dvdt_file(self, file_name) -> DVDTFile:
         print("loading", file_name)
