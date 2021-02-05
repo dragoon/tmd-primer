@@ -171,7 +171,7 @@ class Dataset:
         return tf.data.Dataset.from_generator(
             lambda: self._get_ndarray(),
             output_signature=(
-                tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, feature_n), dtype=tf.float32),
                 tf.TensorSpec(shape=(None, 1), dtype=tf.int32),
             ),
         ).padded_batch(
@@ -196,7 +196,7 @@ class Dataset:
         return tf.data.Dataset.from_generator(
             lambda: self._get_strided_ndarray(window_size),
             output_signature=(
-                tf.TensorSpec(shape=(5,), dtype=tf.float32),
+                tf.TensorSpec(shape=(window_size,), dtype=tf.float32),
                 tf.TensorSpec(shape=(1, 1), dtype=tf.int32),
             ),
         ).batch(batch_size)
