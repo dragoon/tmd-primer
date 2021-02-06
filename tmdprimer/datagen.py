@@ -191,7 +191,8 @@ class Dataset:
 
         def flat_zip(x, y):
             return tf.data.Dataset.zip(
-                (x.batch(window_size, drop_remainder=True), y.batch(window_size, drop_remainder=True))
+                # take the last label in a window
+                (x.batch(window_size, drop_remainder=True), y.skip(window_size-1))
             )
 
         return tf.data.Dataset.from_generator(
@@ -200,7 +201,7 @@ class Dataset:
             ),
             output_signature=(
                 tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
-                tf.TensorSpec(shape=(1, 1), dtype=tf.int32),
+                tf.TensorSpec(shape=(1,), dtype=tf.int32),
             ),
         ).batch(batch_size)
 
