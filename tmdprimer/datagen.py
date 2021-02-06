@@ -156,7 +156,11 @@ class Dataset:
 
         return tf.data.Dataset.from_generator(
             lambda: self._get_weighted_ndarray(weighting),
-            (tf.float32, tf.int32, tf.float32),
+            output_signature=(
+                tf.TensorSpec(shape=(None, 1), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, 1), dtype=tf.int32),
+                tf.TensorSpec(shape=(None,), dtype=tf.float32),
+            ),
         ).padded_batch(
             batch_size,
             padded_shapes=([None, feature_n], [None, 1], [None]),
@@ -168,7 +172,13 @@ class Dataset:
         self.std_scaler.fit(X)
         feature_n = len(X[0])
 
-        return tf.data.Dataset.from_generator(lambda: self._get_ndarray(), (tf.float32, tf.int32),).padded_batch(
+        return tf.data.Dataset.from_generator(
+            lambda: self._get_ndarray(),
+            output_signature=(
+                tf.TensorSpec(shape=(None, feature_n), dtype=tf.float32),
+                tf.TensorSpec(shape=(None, 1), dtype=tf.int32),
+            ),
+        ).padded_batch(
             batch_size,
             padding_values=(-1.0, 0),
             padded_shapes=([None, feature_n], [None, 1]),
@@ -176,6 +186,7 @@ class Dataset:
 
     def to_cnn_tfds(self, window_size, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
+        feature_n = len(X[0])
         self.std_scaler.fit(X)
 
         def flat_zip(x, y):
@@ -187,7 +198,10 @@ class Dataset:
             lambda: chain.from_iterable(
                 s.to_tfds().window(window_size, shift=1, drop_remainder=True).flat_map(flat_zip) for s in self.samples
             ),
-            output_types=(tf.float32, tf.int32),
+            output_signature=(
+                tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
+                tf.TensorSpec(shape=(1, 1), dtype=tf.int32),
+            ),
         ).batch(batch_size)
 
 
