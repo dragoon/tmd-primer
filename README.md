@@ -20,9 +20,9 @@ The [Data generation](rnnprimer/Data%20generation.ipynb) notebook describes the 
 4. CNN models:  Modelling the task using a Convolutional neural networks
     1. [Basic CNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/CNN%20Basics.ipynb):  Modelling the task using a windowed CNN model
 5. RNN models: Modelling the task using 3 different RNN models.
-    1. [Per-sample RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/Per-sample%20RNN%20model.ipynb): Classify each element in a sequence for the whole sequence.
-    2. [Split-window RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/Split-window%20RNN%20model.ipynb): Classify each element in a sequence for the part of sequence (for large sequences).
-    3. [Overlapping-window RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/Overlapping-window%20RNN%20model.ipynb): Predict last element in a sequence with windows.
+    1. [Per-sample RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/rnn_models/Per-sample%20RNN%20model.ipynb): Classify each element in a sequence for the whole sequence.
+    2. [Split-window RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/rnn_models/Split-window%20RNN%20model.ipynb): Classify each element in a sequence for the part of sequence (for large sequences).
+    3. [Overlapping-window RNN model](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/rnn_models/Overlapping-window%20RNN%20model.ipynb): Predict last element in a sequence with windows.
 6. RNN advanced topics:
    1. [RNN padding and masking](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/RNN%20padding%20and%20masking.ipynb): Generating data samples of different sizes. Padding samples in RNN model.
    2. [RNN class weights: TODO](https://nbviewer.jupyter.org/github/dragoon/tmd-primer/blob/master/tmdprimer/RNN%20class%20weights.ipynb): Generating data samples with different class proportions. Class weights in the RNN model.
