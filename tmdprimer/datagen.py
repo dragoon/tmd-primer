@@ -153,22 +153,27 @@ class Dataset:
         X = [f.features for f in self._get_flat_features()]
         self.std_scaler.fit(X)
         feature_n = len(X[0])
-        # 1. get features and labels as numpy arrays
-        samples_numpy_iter = (s.to_numpy() for s in self.samples)
-        scaled_iter = ((self.std_scaler.transform(x), np.reshape(y, (-1, 1))) for x, y in samples_numpy_iter)
+
+        # tensorflow can call this method multiple times to get as many samples as needed
+        # specifying it as lambda doesn't work since iterator is exhausted
+        def scaled_iter():
+            return (
+                (self.std_scaler.transform(x), np.reshape(y, (-1, 1))) for x, y in (s.to_numpy() for s in self.samples)
+            )
 
         return tf.data.Dataset.from_generator(
-            lambda: scaled_iter,
+            scaled_iter,
             output_signature=(
                 tf.TensorSpec(shape=(None, feature_n), dtype=tf.float32),
                 tf.TensorSpec(shape=(None, 1), dtype=tf.int32),
             ),
         )
+
     # .padded_batch(
-    #             batch_size,
-    #             padding_values=(-1.0, 0),
-    #             padded_shapes=([None, feature_n], [None, 1]),
-    #         )
+    #         batch_size,
+    #         padding_values=(-1.0, 0),
+    #         padded_shapes=([None, feature_n], [None, 1]),
+    #     )
 
     def to_cnn_tfds(self, window_size, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
@@ -178,7 +183,7 @@ class Dataset:
         def flat_zip(x, y):
             return tf.data.Dataset.zip(
                 # take the last label in a window
-                (x.batch(window_size, drop_remainder=True), y.skip(window_size-1))
+                (x.batch(window_size, drop_remainder=True), y.skip(window_size - 1))
             )
 
         return tf.data.Dataset.from_generator(
