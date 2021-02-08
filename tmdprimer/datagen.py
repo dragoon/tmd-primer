@@ -32,6 +32,14 @@ class Sample:
         features, labels = tuple(zip(*self.labeled_features_tuples()))
         return np.array(features), np.array(labels)
 
+    def to_numpy_windows(self, window_size) -> Tuple[np.ndarray, np.ndarray]:
+        x, y = self.to_numpy()
+        x_windows = make_sliding_windows(x, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        y_windows = make_sliding_windows(y, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        # take the last label of the window
+        y_windows = np.array([x[-1] for x in y_windows], dtype=int)
+        return x_windows, y_windows
+
     def get_figure(self):
         import pandas as pd
 
@@ -169,32 +177,26 @@ class Dataset:
             ),
         )
 
-    # .padded_batch(
-    #         batch_size,
-    #         padding_values=(-1.0, 0),
-    #         padded_shapes=([None, feature_n], [None, 1]),
-    #     )
-
-    def to_cnn_tfds(self, window_size, batch_size=20):
+    def to_window_tfds(self, window_size):
         X = [f.features for f in self._get_flat_features()]
         feature_n = len(X[0])
         self.std_scaler.fit(X)
 
-        def flat_zip(x, y):
-            return tf.data.Dataset.zip(
-                # take the last label in a window
-                (x.batch(window_size, drop_remainder=True), y.skip(window_size - 1))
-            )
+        # tensorflow can call this method multiple times to get as many samples as needed
+        # specifying it as lambda doesn't work since iterator is exhausted
+        def scaled_iter():
+            for windows_x, windows_y in (s.to_numpy_windows(window_size) for s in self.samples):
+                windows_y = np.reshape(windows_y, (-1, 1))
+                for x, y in zip(windows_x, windows_y):
+                    yield self.std_scaler.transform(x), y
 
         return tf.data.Dataset.from_generator(
-            lambda: chain.from_iterable(
-                s.to_tfds().window(window_size, shift=1, drop_remainder=True).flat_map(flat_zip) for s in self.samples
-            ),
+            scaled_iter,
             output_signature=(
                 tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
                 tf.TensorSpec(shape=(1,), dtype=tf.int32),
             ),
-        ).batch(batch_size)
+        )
 
 
 def make_sliding_windows(data, window_size, overlap_size=0, flatten_inside_window=True):
