@@ -28,9 +28,9 @@ class Sample:
     def labeled_features_tuples(self):
         return [(fw.features, fw.label) for fw in self.features]
 
-    def to_tfds(self) -> tf.data.Dataset:
+    def to_numpy(self) -> Tuple[np.ndarray, np.ndarray]:
         features, labels = tuple(zip(*self.labeled_features_tuples()))
-        return tf.data.Dataset.from_tensor_slices((np.array(features), np.expand_dims(np.array(labels), axis=-1)))
+        return np.array(features), np.array(labels)
 
     def get_figure(self):
         import pandas as pd
@@ -121,24 +121,6 @@ class Dataset:
         p = np.random.permutation(len(X))
         return np.array(X)[p], np.array(y)[p]
 
-    def _get_sequences(self):
-        sample_iter = (sample.labeled_features_tuples() for sample in self.samples)
-        return (tuple(zip(*windows)) for windows in sample_iter)
-
-    def _get_ndarray(self) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
-        """
-        Same output as `get_sequences` but with Numpy ndarrays (features, labels) with
-        respective shape ([time, features], [time, 1], [time]).
-        This shape is useful for feeding the data into the Keras model.
-        """
-        return (
-            (
-                self.std_scaler.transform(np.array(features, copy=True)),
-                np.expand_dims(np.array(labels), axis=-1),
-            )
-            for features, labels in self._get_sequences()
-        )
-
     def _get_weighted_ndarray(self, weighting: Dict) -> Iterable[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
         return (
             (
@@ -167,22 +149,26 @@ class Dataset:
             padding_values=(-1.0, 0, 0.0),
         )
 
-    def to_tfds(self, batch_size=20):
+    def to_tfds(self):
         X = [f.features for f in self._get_flat_features()]
         self.std_scaler.fit(X)
         feature_n = len(X[0])
+        # 1. get features and labels as numpy arrays
+        samples_numpy_iter = (s.to_numpy() for s in self.samples)
+        scaled_iter = ((self.std_scaler.transform(x), np.reshape(y, (-1, 1))) for x, y in samples_numpy_iter)
 
         return tf.data.Dataset.from_generator(
-            lambda: self._get_ndarray(),
+            lambda: scaled_iter,
             output_signature=(
                 tf.TensorSpec(shape=(None, feature_n), dtype=tf.float32),
                 tf.TensorSpec(shape=(None, 1), dtype=tf.int32),
             ),
-        ).padded_batch(
-            batch_size,
-            padding_values=(-1.0, 0),
-            padded_shapes=([None, feature_n], [None, 1]),
         )
+    # .padded_batch(
+    #             batch_size,
+    #             padding_values=(-1.0, 0),
+    #             padded_shapes=([None, feature_n], [None, 1]),
+    #         )
 
     def to_cnn_tfds(self, window_size, batch_size=20):
         X = [f.features for f in self._get_flat_features()]
