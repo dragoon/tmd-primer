@@ -28,12 +28,21 @@ class Sample:
     def labeled_features_tuples(self):
         return [(fw.features, fw.label) for fw in self.features]
 
-    def to_numpy(self) -> Tuple[np.ndarray, np.ndarray]:
+    def to_numpy(self, scaler) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        :param scaler: scaler to transform features
+        :return: x of shape (seq_length, n_features), y of shape (seq_length, 1)
+        """
         features, labels = tuple(zip(*self.labeled_features_tuples()))
-        return np.array(features), np.array(labels)
+        return scaler.transform(np.array(features)), np.reshape(np.array(labels), (-1, 1))
 
-    def to_numpy_windows(self, window_size) -> Tuple[np.ndarray, np.ndarray]:
-        x, y = self.to_numpy()
+    def to_numpy_windows(self, window_size, scaler) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        :param window_size:
+        :param scaler: scale before making windows for speed (2x performance improvement)
+        :return:
+        """
+        x, y = self.to_numpy(scaler)
         x_windows = make_sliding_windows(x, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         y_windows = make_sliding_windows(y, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
         # take the last label of the window
@@ -165,9 +174,7 @@ class Dataset:
         # tensorflow can call this method multiple times to get as many samples as needed
         # specifying it as lambda doesn't work since iterator is exhausted
         def scaled_iter():
-            return (
-                (self.std_scaler.transform(x), np.reshape(y, (-1, 1))) for x, y in (s.to_numpy() for s in self.samples)
-            )
+            return (s.to_numpy(self.std_scaler) for s in self.samples)
 
         return tf.data.Dataset.from_generator(
             scaled_iter,
@@ -185,10 +192,8 @@ class Dataset:
         # tensorflow can call this method multiple times to get as many samples as needed
         # specifying it as lambda doesn't work since iterator is exhausted
         def scaled_iter():
-            for windows_x, windows_y in (s.to_numpy_windows(window_size) for s in self.samples):
-                windows_y = np.reshape(windows_y, (-1, 1))
-                for x, y in zip(windows_x, windows_y):
-                    yield self.std_scaler.transform(x), y
+            for windows_x, windows_y in (s.to_numpy_windows(window_size, self.std_scaler) for s in self.samples):
+                yield from zip(windows_x, windows_y)
 
         return tf.data.Dataset.from_generator(
             scaled_iter,
