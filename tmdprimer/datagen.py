@@ -12,13 +12,13 @@ AVG_WALK_SPEED = 5
 AVG_TRAIN_SPEED = 100
 
 
-@dataclass
+@dataclass(frozen=True)
 class LabeledFeature:
     features: List[float]
     label: int
 
 
-@dataclass
+@dataclass(frozen=True)
 class Sample:
     features: List[LabeledFeature]
 
