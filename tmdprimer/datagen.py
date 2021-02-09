@@ -36,7 +36,18 @@ class Sample:
         features, labels = tuple(zip(*self.labeled_features_tuples()))
         return scaler.transform(np.array(features)), np.reshape(np.array(labels), (-1, 1))
 
-    def to_numpy_windows(self, window_size, scaler) -> Tuple[np.ndarray, np.ndarray]:
+    def to_numpy_split_windows(self, window_size, scaler) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        :param window_size:
+        :param scaler: scale before making windows for speed (2x performance improvement)
+        :return: non-overlapping windows of size window_size from original sequence
+        """
+        x, y = self.to_numpy(scaler)
+        x_windows = make_sliding_windows(x, window_size, overlap_size=0, flatten_inside_window=False)
+        y_windows = make_sliding_windows(y, window_size, overlap_size=0, flatten_inside_window=False)
+        return x_windows, y_windows
+
+    def to_numpy_sliding_windows(self, window_size, scaler) -> Tuple[np.ndarray, np.ndarray]:
         """
         :param window_size:
         :param scaler: scale before making windows for speed (2x performance improvement)
@@ -184,6 +195,27 @@ class Dataset:
             ),
         )
 
+    def to_split_window_tfds(self, window_size):
+        X = [f.features for f in self._get_flat_features()]
+        feature_n = len(X[0])
+        self.std_scaler.fit(X)
+
+        # tensorflow can call this method multiple times to get as many samples as needed
+        # specifying it as lambda doesn't work since iterator is exhausted
+        def scaled_iter():
+            for windows_x, windows_y in (
+                s.to_numpy_split_windows(window_size, self.std_scaler) for s in self.samples
+            ):
+                yield from zip(windows_x, windows_y)
+
+        return tf.data.Dataset.from_generator(
+            scaled_iter,
+            output_signature=(
+                tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
+                tf.TensorSpec(shape=(window_size, 1), dtype=tf.int32),
+            ),
+        )
+
     def to_window_tfds(self, window_size):
         X = [f.features for f in self._get_flat_features()]
         feature_n = len(X[0])
@@ -192,7 +224,9 @@ class Dataset:
         # tensorflow can call this method multiple times to get as many samples as needed
         # specifying it as lambda doesn't work since iterator is exhausted
         def scaled_iter():
-            for windows_x, windows_y in (s.to_numpy_windows(window_size, self.std_scaler) for s in self.samples):
+            for windows_x, windows_y in (
+                s.to_numpy_sliding_windows(window_size, self.std_scaler) for s in self.samples
+            ):
                 yield from zip(windows_x, windows_y)
 
         return tf.data.Dataset.from_generator(
