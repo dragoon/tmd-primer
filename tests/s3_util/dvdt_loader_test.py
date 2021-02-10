@@ -1,3 +1,4 @@
+import os
 import json
 from unittest import TestCase, main
 import numpy as np
@@ -10,7 +11,8 @@ class TestDVDTLoader(TestCase):
 
     def setUp(self):
         super().setUp()
-        self.test_file = DVDTFile.from_json(json.load(open("accel_data.json")))
+        file_path = os.path.dirname(os.path.realpath(__file__))
+        self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         self.dataset = DVDTDataset.from_files([self.test_file])
 
     def test_windows_x_y(self):
