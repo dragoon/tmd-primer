@@ -1,3 +1,5 @@
+![build status](https://github.com/dragoon/tmd-primer/workflows/Build/badge.svg)
+
 # Sequence classification with Neural Networks: a primer
 
 This repository demonstrates the advantages of RNNs and CNNs over traditional ML models on time-series data **with outliers**.
