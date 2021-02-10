@@ -16,7 +16,7 @@ from tmdprimer.datagen import make_sliding_windows
 STOP_LABEL = "stop"
 
 
-@dataclass
+@dataclass(frozen=True)
 class AnnotatedStop:
     start_time: datetime
     end_time: datetime
@@ -32,7 +32,7 @@ class AnnotatedStop:
         return self.end_time - self.start_time
 
 
-@dataclass
+@dataclass(frozen=True)
 class DVDTFile:
     start_time: datetime
     end_time: datetime
@@ -125,7 +125,7 @@ class DVDTFile:
         base = alt.Chart(df).encode(x="time")
         x, y = self._windows_x_y(label=1, stop_label=0, window_size=window_size)
         pred_y = model.predict(x)
-        df.loc[:, 'pred_label'] = pd.Series(pred_y.flatten())
+        df.loc[:, "pred_label"] = pd.Series(pred_y.flatten())
         df.fillna(1)
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
@@ -134,19 +134,24 @@ class DVDTFile:
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
 
+@dataclass(frozen=True)
 class DVDTDataset:
-    s3client = None
-    bucket: str
     dvdt_files: List[DVDTFile]
 
-    def __init__(self, bucket: str, prefix: str, labels_to_load: Iterable = None):
-        self.s3client = boto3.client("s3")
-        self.bucket = bucket
-        self.dvdt_files = self._get_dataset(prefix, labels_to_load)
+    @staticmethod
+    def load(bucket: str, path: str, labels_to_load: Iterable = None):
+        s3client = boto3.client("s3")
+        dvdt_files = DVDTDataset._get_dataset(s3client, bucket, path, labels_to_load)
+        return DVDTDataset(dvdt_files)
 
-    def _get_dataset(self, prefix: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
+    @staticmethod
+    def from_files(dvdt_files: List[DVDTFile]):
+        return DVDTDataset(dvdt_files)
+
+    @staticmethod
+    def _get_dataset(s3client, bucket: str, prefix: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
         file_label_mapping = {}
-        for entry in self.s3client.list_objects(Bucket=self.bucket, Prefix=prefix)["Contents"]:
+        for entry in s3client.list_objects(Bucket=bucket, Prefix=prefix)["Contents"]:
             key = entry["Key"]
             if key.endswith("high.zip"):
                 label = key.split("/")[1]
@@ -162,25 +167,25 @@ class DVDTDataset:
         result = []
         for label in labels_to_load:
             for file_name in file_label_mapping[label]:
-                result.append(self._load_dvdt_file(file_name))
+                result.append(DVDTDataset._load_dvdt_file(s3client, bucket, file_name))
         return result
 
-    def to_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
-        x = []
-        y = []
-        for f in self.dvdt_files:
-            windows_x, windows_y = f._windows_x_y(label, stop_label, window_size)
-            x.append(windows_x)
-            y.append(windows_y)
-        return tf.data.Dataset.from_tensor_slices((np.concatenate(x), np.concatenate(y)))
+    def to_window_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
+        def scaled_iter():
+            for f in self.dvdt_files:
+                windows_x, windows_y = f._windows_x_y(label, stop_label, window_size)
+                yield from zip(windows_x, windows_y)
 
-    def _load_dvdt_file(self, file_name) -> DVDTFile:
+        return tf.data.Dataset.from_generator(scaled_iter, output_types=(tf.float32, tf.int32))
+
+    @staticmethod
+    def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
         print("loading", file_name)
-        response = self.s3client.get_object(Bucket=self.bucket, Key=file_name)
-        with io.BytesIO(response["Body"].read()) as tf:
+        response = s3client.get_object(Bucket=bucket, Key=file_name)
+        with io.BytesIO(response["Body"].read()) as datafile:
             # rewind the file
-            tf.seek(0)
-            with ZipFile(tf, mode="r") as zip_file:
+            datafile.seek(0)
+            with ZipFile(datafile, mode="r") as zip_file:
                 for file in zip_file.namelist():
                     if file.endswith(".json") and "/" not in file:
                         with zip_file.open(file) as accel_json:
