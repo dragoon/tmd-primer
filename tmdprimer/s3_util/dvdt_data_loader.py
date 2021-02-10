@@ -73,7 +73,7 @@ class DVDTFile:
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def _windows_x_y(self, label: int, stop_label: int, window_size: int):
+    def to_numpy_sliding_windows(self, label: int, stop_label: int, window_size: int):
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
@@ -123,7 +123,7 @@ class DVDTFile:
         df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
         alt.data_transformers.disable_max_rows()
         base = alt.Chart(df).encode(x="time")
-        x, y = self._windows_x_y(label=1, stop_label=0, window_size=window_size)
+        x, y = self.to_numpy_sliding_windows(label=1, stop_label=0, window_size=window_size)
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = pd.Series(pred_y.flatten())
         df.fillna(1)
@@ -173,10 +173,14 @@ class DVDTDataset:
     def to_window_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
         def scaled_iter():
             for f in self.dvdt_files:
-                windows_x, windows_y = f._windows_x_y(label, stop_label, window_size)
+                windows_x, windows_y = f.to_numpy_sliding_windows(label, stop_label, window_size)
                 yield from zip(windows_x, windows_y)
 
-        return tf.data.Dataset.from_generator(scaled_iter, output_types=(tf.float32, tf.int32))
+        return tf.data.Dataset.from_generator(
+            scaled_iter,
+            output_types=(tf.float32, tf.int32),
+            output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
+        )
 
     @staticmethod
     def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
