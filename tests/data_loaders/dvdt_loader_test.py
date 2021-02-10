@@ -3,7 +3,7 @@ import json
 from unittest import TestCase, main
 import numpy as np
 
-from tmdprimer.s3_util.dvdt_data_loader import DVDTFile, DVDTDataset
+from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset
 
 
 class TestDVDTLoader(TestCase):
