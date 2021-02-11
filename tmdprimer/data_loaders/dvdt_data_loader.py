@@ -125,7 +125,10 @@ class DVDTFile:
         base = alt.Chart(df).encode(x="time")
         x, y = self.to_numpy_sliding_windows(label=1, stop_label=0, window_size=window_size)
         pred_y = model.predict(x)
-        df.loc[:, "pred_label"] = pd.Series(pred_y.flatten())
+        df.loc[:, "pred_label"] = (
+            # reindex to insert NANs in the beginning
+            pd.Series(pred_y.flatten()).reindex(range(len(pred_y) - len(df), len(pred_y))).reset_index(drop=True)
+        )
         df.fillna(1)
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
