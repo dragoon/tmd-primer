@@ -191,8 +191,8 @@ class DVDTDataset:
         for f in self.dvdt_files:
             windows_x, windows_y = f.to_numpy_sliding_windows(label, stop_label, window_size)
             if result_x is not None:
-                np.append(result_x, windows_x, axis=0)
-                np.append(result_y, windows_y, axis=0)
+                result_x = np.append(result_x, windows_x, axis=0)
+                result_y = np.append(result_y, windows_y, axis=0)
             else:
                 result_x = windows_x
                 result_y = windows_y

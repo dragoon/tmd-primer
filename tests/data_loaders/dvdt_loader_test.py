@@ -44,7 +44,7 @@ class TestDVDTLoader(TestCase):
         test_file2 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         dataset = DVDTDataset.from_files([test_file1, test_file2])
         x, y = dataset.to_window_numpy(label=1, window_size=5, stop_label=0)
-        true_windows_len = sum(len(s.df) for s in self.dataset.dvdt_files) - len(self.dataset.dvdt_files) * (
+        true_windows_len = sum(len(s.df) for s in dataset.dvdt_files) - len(dataset.dvdt_files) * (
             window_size - 1
         )
         self.assertEquals(len(x), true_windows_len)
