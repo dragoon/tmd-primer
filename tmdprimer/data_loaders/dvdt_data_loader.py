@@ -1,7 +1,7 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Dict, Iterable, List
+from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -73,7 +73,7 @@ class DVDTFile:
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def to_numpy_sliding_windows(self, label: int, stop_label: int, window_size: int):
+    def to_numpy_sliding_windows(self, label: int, stop_label: int, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
         time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
@@ -184,6 +184,19 @@ class DVDTDataset:
             output_types=(tf.float32, tf.int32),
             output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
         )
+
+    def to_window_numpy(self, label, window_size, stop_label=0) -> Tuple[np.ndarray, np.ndarray]:
+        result_x = None
+        result_y = None
+        for f in self.dvdt_files:
+            windows_x, windows_y = f.to_numpy_sliding_windows(label, stop_label, window_size)
+            if result_x is not None:
+                np.append(result_x, windows_x, axis=0)
+                np.append(result_y, windows_y, axis=0)
+            else:
+                result_x = windows_x
+                result_y = windows_y
+        return result_x, result_y
 
     @staticmethod
     def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
