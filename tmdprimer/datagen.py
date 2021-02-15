@@ -4,6 +4,7 @@ from typing import List, Iterable, Tuple, Dict
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 import altair as alt
 import tensorflow as tf
 from sklearn.preprocessing import MinMaxScaler
@@ -61,8 +62,6 @@ class Sample:
         return x_windows, y_windows
 
     def get_figure(self):
-        import pandas as pd
-
         df = pd.DataFrame(data=({"time step": i, "speed": lf.features[0]} for i, lf in enumerate(self.features)))
 
         return alt.Chart(df).mark_line().encode(x="time step", y="speed")
@@ -245,15 +244,16 @@ def make_sliding_windows(data, window_size, overlap_size=0, flatten_inside_windo
 
     # get the number of overlapping windows that fit into the data
     num_windows = (data.shape[0] - window_size) // (window_size - overlap_size) + 1
-    overhang = data.shape[0] - (num_windows * window_size - (num_windows - 1) * overlap_size)
+    # ROMAN: skip overhang padding
+    # overhang = data.shape[0] - (num_windows * window_size - (num_windows - 1) * overlap_size)
 
     # if there's overhang, need an extra window and a zero pad on the data
     # (numpy 1.7 has a nice pad function I'm not using here)
-    if overhang != 0:
-        num_windows += 1
-        newdata = np.zeros((num_windows * window_size - (num_windows - 1) * overlap_size, data.shape[1]))
-        newdata[: data.shape[0]] = data
-        data = newdata
+    # if overhang != 0:
+    #     num_windows += 1
+    #     newdata = np.zeros((num_windows * window_size - (num_windows - 1) * overlap_size, data.shape[1]))
+    #     newdata[: data.shape[0]] = data
+    #     data = newdata
 
     sz = data.dtype.itemsize
     ret = np.lib.stride_tricks.as_strided(

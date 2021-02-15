@@ -3,7 +3,7 @@ from unittest import TestCase, main
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-from tmdprimer.datagen import Sample, LabeledFeature, Dataset
+from tmdprimer.datagen import Sample, LabeledFeature, Dataset, make_sliding_windows
 
 
 class DatagenTest(TestCase):
@@ -25,12 +25,12 @@ class DatagenTest(TestCase):
         # convert to list to compare
         tfds = list(dataset.to_tfds().as_numpy_iterator())
         # dataset has 2 element
-        self.assertEquals(len(tfds), 2)
+        self.assertEqual(len(tfds), 2)
         # each element has 2 element tuple -- features and labels
-        self.assertEquals(len(tfds[0]), 2)
+        self.assertEqual(len(tfds[0]), 2)
         # both features and labels have shapes of (100, 1)
-        self.assertEquals(tfds[0][0].shape, (100, 1))
-        self.assertEquals(tfds[0][1].shape, (100, 1))
+        self.assertEqual(tfds[0][0].shape, (100, 1))
+        self.assertEqual(tfds[0][1].shape, (100, 1))
 
     def test_window_tfds(self):
         sample1 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
@@ -42,13 +42,13 @@ class DatagenTest(TestCase):
         # dataset has 2 element
         # number of widows = total timesteps (100+100) - dropped remainder for each sample (4+4) = 192
         true_windows_size = sum(len(s.features) for s in dataset.samples) - len(dataset.samples) * (window_size - 1)
-        self.assertEquals(len(tfds), true_windows_size)
+        self.assertEqual(len(tfds), true_windows_size)
         # each element has 2 element tuple -- features and labels
-        self.assertEquals(len(tfds[0]), 2)
+        self.assertEqual(len(tfds[0]), 2)
         # features has shape of (window_size, 1)
-        self.assertEquals(tfds[0][0].shape, (window_size, 1))
+        self.assertEqual(tfds[0][0].shape, (window_size, 1))
         # labels is (1,)
-        self.assertEquals(tfds[0][1].shape, (1,))
+        self.assertEqual(tfds[0][1].shape, (1,))
         # TODO: also check label and feature contents
 
     def test_split_window_tfds(self):
@@ -61,14 +61,26 @@ class DatagenTest(TestCase):
         # dataset has 2 element
         # number of widows = sum for each sample == number of timesteps // window_size
         true_windows_size = sum(len(s.features) // window_size for s in dataset.samples)
-        self.assertEquals(len(tfds), true_windows_size)
+        self.assertEqual(len(tfds), true_windows_size)
         # each element has 2 element tuple -- features and labels
-        self.assertEquals(len(tfds[0]), 2)
+        self.assertEqual(len(tfds[0]), 2)
         # features has shape of (window_size, 1)
-        self.assertEquals(tfds[0][0].shape, (window_size, 1))
+        self.assertEqual(tfds[0][0].shape, (window_size, 1))
         # labels is (5, 1) for split window since we predict sequences
-        self.assertEquals(tfds[0][1].shape, (window_size, 1))
+        self.assertEqual(tfds[0][1].shape, (window_size, 1))
         # TODO: also check label and feature contents
+
+    def test_make_sliding_windows_overlap(self):
+        data = np.array([1, 2, 3, 4, 5, 6, 7])
+        windows = make_sliding_windows(data, window_size=5, overlap_size=4, flatten_inside_window=True)
+        true_windows = np.array([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7]])
+        self.assertTrue(np.array_equal(true_windows, windows))
+
+    def test_make_sliding_windows_split(self):
+        data = np.array([1, 2, 3, 4, 5, 6, 7])
+        windows = make_sliding_windows(data, window_size=5, overlap_size=0, flatten_inside_window=True)
+        true_windows = np.array([[1, 2, 3, 4, 5]])
+        self.assertTrue(np.array_equal(true_windows, windows))
 
 
 if __name__ == "__main__":
