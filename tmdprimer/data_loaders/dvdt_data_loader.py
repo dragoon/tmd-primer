@@ -129,7 +129,6 @@ class DVDTFile:
             # reindex to insert NANs in the beginning
             pd.Series(pred_y.flatten()).reindex(range(len(pred_y) - len(df), len(pred_y))).reset_index(drop=True)
         )
-        df.fillna(1)
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),
