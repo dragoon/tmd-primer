@@ -1,5 +1,6 @@
 import os
 import json
+from datetime import timedelta
 from unittest import TestCase, main
 import numpy as np
 
@@ -44,14 +45,19 @@ class TestDVDTLoader(TestCase):
         test_file2 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         dataset = DVDTDataset.from_files([test_file1, test_file2])
         x, y = dataset.to_window_numpy(label=1, window_size=5, stop_label=0)
-        true_windows_len = sum(len(s.df) for s in dataset.dvdt_files) - len(dataset.dvdt_files) * (
-            window_size - 1
-        )
+        true_windows_len = sum(len(s.df) for s in dataset.dvdt_files) - len(dataset.dvdt_files) * (window_size - 1)
         self.assertEquals(len(x), true_windows_len)
         # each element in X has shape of (window_size, 1)
         self.assertEquals(x[0].shape, (window_size, 1))
         # labels is (1,)
         self.assertEquals(y[0].shape, (1,))
+
+    def stop_durations_test(self):
+        durations = self.dataset.stop_durations
+        self.assertEqual(
+            durations,
+            {"tram": [timedelta(milliseconds=0), timedelta(milliseconds=1)], "stop": [timedelta(milliseconds=2)]},
+        )
 
 
 if __name__ == "__main__":

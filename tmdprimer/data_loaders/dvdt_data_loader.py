@@ -1,6 +1,8 @@
 import json
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from itertools import groupby
 from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
@@ -61,6 +63,7 @@ class DVDTFile:
     def __post_init__(self):
         self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
         self.df["time"] = pd.to_datetime(self.df["timestamp"], unit="ms")
+        self.df["time_diff"] = self.df["timestamp"].diff()
 
     def _get_linear_accel_norm(self):
         # clip to 0 - 25
@@ -74,7 +77,6 @@ class DVDTFile:
         return input_data.rolling(window_size).quantile(quantile)
 
     def to_numpy_sliding_windows(self, label: int, stop_label: int, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
-        time_diff_series = self.df["timestamp"].diff()
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
@@ -134,6 +136,18 @@ class DVDTFile:
             base.mark_line(color="orange").encode(y="label"),
             base.mark_line(color="red").encode(y="pred_label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    @property
+    def stop_durations(self) -> Dict:
+        """
+        collection all durations of stops and non-stops
+        :return: dict with labels as keys and durations list
+        """
+        result = defaultdict(list)
+        for key, group in groupby(self.df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
+            g_list = list(group)
+            result[key].append(g_list[-1][1] - g_list[0][1])
+        return result
 
 
 @dataclass(frozen=True)
@@ -209,3 +223,15 @@ class DVDTDataset:
                     if file.endswith(".json") and "/" not in file:
                         with zip_file.open(file) as accel_json:
                             return DVDTFile.from_json(json.loads(accel_json.read()))
+
+    @property
+    def stop_durations(self) -> Dict:
+        """
+        collection all durations of stops and non-stops
+        :return: dict with labels as keys and durations list
+        """
+        result = defaultdict(list)
+        for f in self.dvdt_files:
+            for k, v in f.stop_durations.items():
+                result[k].extend(v)
+        return result
