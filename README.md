@@ -1,4 +1,5 @@
 ![build status](https://github.com/dragoon/tmd-primer/workflows/Build/badge.svg)
+[![codecov](https://codecov.io/gh/dragoon/tmd-primer/branch/master/graph/badge.svg?token=KSR9JPTDBJ)](https://codecov.io/gh/dragoon/tmd-primer)
 
 # Sequence classification with Neural Networks: a primer
 
