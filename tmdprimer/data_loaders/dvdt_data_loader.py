@@ -146,6 +146,8 @@ class DVDTFile:
         result = []
         for key, group in groupby(self.df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
             g_list = list(group)
+            if key == "stop":
+                key = f"stop_{self.transport_mode}"
             result.append({"mode": key, "duration": g_list[-1][1] - g_list[0][1]})
         return result
 
