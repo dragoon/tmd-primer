@@ -167,25 +167,14 @@ class DVDTDataset:
         return DVDTDataset(dvdt_files)
 
     @staticmethod
-    def _get_dataset(s3client, bucket: str, prefix: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
-        file_label_mapping = {}
-        for entry in s3client.list_objects(Bucket=bucket, Prefix=prefix)["Contents"]:
-            key = entry["Key"]
-            if key.endswith("high.zip"):
-                label = key.split("/")[1]
-                if label not in file_label_mapping:
-                    file_label_mapping[label] = []
-                file_label_mapping[label].append(key)
-
-        for label, file_names in file_label_mapping.items():
-            print(f"{label}: {len(file_names)} files")
-
-        if labels_to_load is None:
-            labels_to_load = file_label_mapping.keys()
+    def _get_dataset(s3client, bucket: str, path: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
         result = []
-        for label in labels_to_load:
-            for file_name in file_label_mapping[label]:
-                result.append(DVDTDataset._load_dvdt_file(s3client, bucket, file_name))
+        for entry in s3client.list_objects(Bucket=bucket, Prefix=path)["Contents"]:
+            file_name = entry["Key"]
+            if file_name.endswith("high.zip"):
+                dvdt_file = DVDTDataset._load_dvdt_file(s3client, bucket, file_name)
+                if labels_to_load is None or dvdt_file.transport_mode in labels_to_load:
+                    result.append(dvdt_file)
         return result
 
     def to_window_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
