@@ -138,15 +138,15 @@ class DVDTFile:
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
     @property
-    def stop_durations(self) -> Dict:
+    def stop_durations(self) -> List[Dict]:
         """
         collection all durations of stops and non-stops
         :return: dict with labels as keys and durations list
         """
-        result = defaultdict(list)
+        result = []
         for key, group in groupby(self.df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
             g_list = list(group)
-            result[key].append(g_list[-1][1] - g_list[0][1])
+            result.append({"mode": key, "duration": g_list[-1][1] - g_list[0][1]})
         return result
 
 
@@ -225,13 +225,13 @@ class DVDTDataset:
                             return DVDTFile.from_json(json.loads(accel_json.read()))
 
     @property
-    def stop_durations(self) -> Dict:
+    def stop_durations_df(self) -> pd.DataFrame:
         """
         collection all durations of stops and non-stops
         :return: dict with labels as keys and durations list
         """
-        result = defaultdict(list)
+        result = []
         for f in self.dvdt_files:
-            for k, v in f.stop_durations.items():
-                result[k].extend(v)
-        return result
+            # ignore first / last durations just in case
+            result.extend(f.stop_durations[1:-1])
+        return pd.DataFrame(result)
