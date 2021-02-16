@@ -1,6 +1,5 @@
 import json
-from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import groupby
 from typing import Dict, Iterable, List, Tuple
@@ -32,6 +31,13 @@ class AnnotatedStop:
     @property
     def duration(self) -> timedelta:
         return self.end_time - self.start_time
+
+    def max_margin(self, other: "AnnotatedStop") -> timedelta:
+        """
+        Calculates maximum time different for another annotated stop on both sides
+        Used to compute metrics
+        """
+        return max(abs(self.start_time - other.start_time), abs(self.end_time - other.end_time))
 
 
 @dataclass(frozen=True)
@@ -129,7 +135,9 @@ class DVDTFile:
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = (
             # reindex to insert NANs in the beginning
-            pd.Series(pred_y.flatten()).reindex(range(len(pred_y) - len(df), len(pred_y))).reset_index(drop=True)
+            pd.Series(pred_y.flatten())
+            .reindex(range(len(pred_y) - len(df), len(pred_y)))
+            .reset_index(drop=True)
         )
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),

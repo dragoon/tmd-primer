@@ -1,10 +1,10 @@
 import os
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
 from unittest import TestCase, main
 import numpy as np
 
-from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset
+from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset, AnnotatedStop
 
 
 class TestDVDTLoader(TestCase):
@@ -55,6 +55,23 @@ class TestDVDTLoader(TestCase):
     def stop_durations_test(self):
         durations = self.dataset.stop_durations_df["duration"].to_list()
         self.assertEqual(durations, [timedelta(milliseconds=2)])
+
+
+class TestAnnotatedStop(TestCase):
+
+    def test_max_margin(self):
+        as1 = AnnotatedStop(datetime.fromtimestamp(1), datetime.fromtimestamp(10))
+        as2 = AnnotatedStop(datetime.fromtimestamp(5), datetime.fromtimestamp(15))
+
+        margin = as1.max_margin(as2)
+        self.assertEqual(margin, timedelta(seconds=5))
+
+    def test_max_margin_non_overlap(self):
+        as1 = AnnotatedStop(datetime.fromtimestamp(1), datetime.fromtimestamp(10))
+        as2 = AnnotatedStop(datetime.fromtimestamp(11), datetime.fromtimestamp(15))
+
+        margin = as1.max_margin(as2)
+        self.assertEqual(margin, timedelta(seconds=10))
 
 
 if __name__ == "__main__":
