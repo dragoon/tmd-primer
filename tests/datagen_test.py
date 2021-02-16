@@ -3,11 +3,19 @@ from unittest import TestCase, main
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 
-from tmdprimer.datagen import Sample, LabeledFeature, Dataset, make_sliding_windows
+from tmdprimer.datagen import Sample, LabeledFeature, Dataset, make_sliding_windows, generate_sample
 
 
 class DatagenTest(TestCase):
-    def test_to_numpy(self):
+
+    def test_generate_sample(self):
+        sample = generate_sample()
+        self.assertLessEqual(len(sample), 2000)
+        self.assertGreaterEqual(len(sample), 160)
+        # check walk proportion
+        self.assertEqual(sum([f.label for f in sample.features]), len(sample)/2)
+
+    def test_smaple_to_numpy(self):
         sample = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
         # dummy scaler
         scaler = SimpleNamespace(transform=lambda x: x)
@@ -18,7 +26,7 @@ class DatagenTest(TestCase):
         self.assertTrue(np.array_equal(np_x, np_true_x))
         self.assertTrue(np.array_equal(np_y, np_true_y))
 
-    def test_tfds(self):
+    def test_dataset_tfds(self):
         sample1 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
         sample2 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [1] * 100)])
         dataset = Dataset([sample1, sample2], MinMaxScaler())
@@ -32,7 +40,7 @@ class DatagenTest(TestCase):
         self.assertEqual(tfds[0][0].shape, (100, 1))
         self.assertEqual(tfds[0][1].shape, (100, 1))
 
-    def test_window_tfds(self):
+    def test_dataset_sliding_window_tfds(self):
         sample1 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
         sample2 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [1] * 100)])
         dataset = Dataset([sample1, sample2], MinMaxScaler())
@@ -51,7 +59,7 @@ class DatagenTest(TestCase):
         self.assertEqual(tfds[0][1].shape, (1,))
         # TODO: also check label and feature contents
 
-    def test_split_window_tfds(self):
+    def test_dataset_split_window_tfds(self):
         sample1 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
         sample2 = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [1] * 100)])
         dataset = Dataset([sample1, sample2], MinMaxScaler())
@@ -76,7 +84,7 @@ class DatagenTest(TestCase):
         true_windows = np.array([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [3, 4, 5, 6, 7]])
         self.assertTrue(np.array_equal(true_windows, windows))
 
-    def test_make_sliding_windows_split(self):
+    def test_make_sliding_windows_no_overlap(self):
         data = np.array([1, 2, 3, 4, 5, 6, 7])
         windows = make_sliding_windows(data, window_size=5, overlap_size=0, flatten_inside_window=True)
         true_windows = np.array([[1, 2, 3, 4, 5]])
