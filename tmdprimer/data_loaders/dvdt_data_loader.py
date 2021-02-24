@@ -126,11 +126,12 @@ class DVDTFile:
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
-    def predict_figure(self, model: tf.keras.Model, window_size: int, width=800, height=600):
+    def _base_classification_df(self, model: tf.keras.Model, window_size: int) -> pd.DataFrame:
+        """
+        Computes a base dataframe with model classification results
+        """
         df = self.df[["label", "linear_accel", "time"]].copy()
         df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
-        alt.data_transformers.disable_max_rows()
-        base = alt.Chart(df).encode(x="time")
         x, y = self.to_numpy_sliding_windows(label=1, stop_label=0, window_size=window_size)
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = (
@@ -139,6 +140,124 @@ class DVDTFile:
             .reindex(range(len(pred_y) - len(df), len(pred_y)))
             .reset_index(drop=True)
         )
+        # fill the first window with 1 -- no stop
+        df.fillna(1, inplace=True)
+        return df
+
+    def compute_stops(
+        self,
+        model: tf.keras.Model,
+        model_window_size: int,
+        smoothing_window_size: int,
+        threshold_probability: float,
+        min_stop_duration: timedelta = timedelta(seconds=5),
+        min_interval_between_stops: timedelta = timedelta(seconds=10),
+    ) -> List[AnnotatedStop]:
+        """
+        :param model: model to use for classification
+        :param model_window_size: window size of the model
+        :param smoothing_window_size: size of the window to take the :threshold_probability percentile from
+        :param threshold_probability: percentile of reaching to consider window a stop
+        :param min_stop_duration: minimum duration of a stop to prune short jumps
+        :param min_interval_between_stops: minimum time between two stops
+        :return: stop windows
+
+        NOTE:
+        smoothing_window_size, probability, min_stop_duration and min_interval_between_stops
+        should be optimized to maximize precision/recall.
+        """
+        df = self._base_classification_df(model, model_window_size)
+        # make sure length is the same -- 1 prediction for the first elements
+        stop_windows = [{}]
+        current_labels = [
+            (row[0], row[1]) for row in df[["pred_label", "time"]][:smoothing_window_size].itertuples(index=False)
+        ]
+        current_sum = sum(x[0] for x in current_labels)
+        # smooth with a rolling window -- take 0.8 percentile
+        for row in df[["pred_label", "time"]][smoothing_window_size:].itertuples(index=False):
+            pred_label = row[0]
+            if current_sum / smoothing_window_size < threshold_probability and "start" not in stop_windows[-1]:
+                # 0 is a stop => open the stop window
+                # find the FIRST stop label
+                first_stop_time = next(x[1] for x in current_labels if x[0] < 0.5)
+                stop_windows[-1]["start"] = first_stop_time.to_pydatetime()
+            elif (
+                current_sum / smoothing_window_size > threshold_probability
+                and "start" in stop_windows[-1]
+                and "end" not in stop_windows[-1]
+            ):
+                # find the LAST stop label
+                try:
+                    last_stop_time = next(x[1] for x in reversed(current_labels) if x[0] < 0.5)
+                except StopIteration:
+                    last_stop_time = current_labels[-1][1]
+                stop_windows[-1]["end"] = last_stop_time.to_pydatetime()
+                stop_windows.append({})
+            current_sum = current_sum + pred_label - current_labels.pop(0)[0]
+            current_labels.append((pred_label, row[1]))
+        # check if the last stop window is not closed
+        if "start" in stop_windows[-1]:
+            stop_windows[-1]["end"] = current_labels[-1][1].to_pydatetime()
+            stop_windows.append({})
+
+        annotated_stops = [AnnotatedStop(s["start"], s["end"]) for s in stop_windows[:-1]]
+
+        # 1. merge close or overlapping stops
+        def merge_close_stops(stops: List[AnnotatedStop]):
+            result = list(stops[:1])
+            for s1, s2 in zip(stops, stops[1:]):
+                if s2.start_time - s1.end_time < min_interval_between_stops:
+                    # merge
+                    result[-1] = AnnotatedStop(s1.start_time, s2.end_time)
+                else:
+                    result.append(s2)
+            return result
+
+        while True:
+            merged_annotated_stops = merge_close_stops(annotated_stops)
+            if len(merged_annotated_stops) < len(annotated_stops):
+                annotated_stops = merged_annotated_stops
+            else:
+                break
+
+        # 2. prune short stops
+        annotated_stops = [s for s in annotated_stops if s.duration > min_stop_duration]
+        return annotated_stops
+
+    def predict_figure(self, model: tf.keras.Model, window_size: int, width=800, height=600):
+        # TODO: try chart with legend differently
+        # https://stackoverflow.com/questions/60128774/adding-legend-to-layerd-chart-in-altair
+        df = self._base_classification_df(model, window_size)
+        alt.data_transformers.disable_max_rows()
+        base = alt.Chart(df).encode(x="time")
+
+        return alt.layer(
+            base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
+            base.mark_line(color="orange").encode(y="label"),
+            base.mark_line(color="red").encode(y="pred_label"),
+        ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    def predict_figure_smoothed(
+        self,
+        model: tf.keras.Model,
+        window_size: int,
+        smoothing_window_size: int,
+        threshold_probability: float = 0.5,
+        width=800,
+        height=600,
+    ):
+        df = self.df[["label", "linear_accel", "time"]].copy()
+        df["pred_label"] = 1
+        predicted_stops = self.compute_stops(
+            model,
+            model_window_size=window_size,
+            smoothing_window_size=smoothing_window_size,
+            threshold_probability=threshold_probability,
+        )
+        for s in predicted_stops:
+            df.loc[(df["time"] <= s.end_time) & (df["time"] >= s.start_time), "pred_label"] = 1
+
+        base = alt.Chart(df).encode(x="time")
         return alt.layer(
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),

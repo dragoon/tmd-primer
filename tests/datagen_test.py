@@ -15,7 +15,7 @@ class DatagenTest(TestCase):
         # check walk proportion
         self.assertEqual(sum([f.label for f in sample.features]), len(sample)/2)
 
-    def test_smaple_to_numpy(self):
+    def test_sample_to_numpy(self):
         sample = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
         # dummy scaler
         scaler = SimpleNamespace(transform=lambda x: x)
