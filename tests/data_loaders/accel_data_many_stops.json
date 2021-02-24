@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "timestamp": 1,
+    "endtime": 6,
+    "numberStations": 0,
+    "name": "tram 10 zh",
+    "transportMode": "tram",
+    "comment": "tram 10"
+  },
+  "stops": [
+    {
+      "startTime": 10000,
+      "endTime": 15000
+    },
+    {
+      "startTime": 25000,
+      "endTime": 30000
+    }
+  ],
+  "entries": [
+    {
+      "timestamp": 1000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 5000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 8000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 10000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 15000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 18000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 20000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 25000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 28000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    {
+      "timestamp": 30000,
+      "x": 0,
+      "y": 0,
+      "z": 0
+    }
+  ]
+}
