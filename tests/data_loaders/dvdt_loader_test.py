@@ -85,7 +85,25 @@ class TestModelClassification(TestCase):
             ],
         )
 
-    def test_precision_recall(self):
+    def test_compute_stops_with_merging(self):
+        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 0, 0, 0]))
+        predicted_stops = self.test_file.compute_stops(
+            model=model,
+            model_window_size=2,
+            smoothing_window_size=2,
+            threshold_probability=0.5,
+            min_stop_duration=timedelta(seconds=3),
+            # min interval is > than the time between stops
+            min_interval_between_stops=timedelta(seconds=11),
+        )
+        self.assertEqual(
+            predicted_stops,
+            [
+                AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(30))
+            ],
+        )
+
+    def test_precision_recall_correct(self):
         predicted_stops = [
             AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15)),
             AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
@@ -93,6 +111,34 @@ class TestModelClassification(TestCase):
 
         precision, recall = self.test_file.get_precision_recall(predicted_stops)
         self.assertEqual(precision, 1.0)
+        self.assertEqual(recall, 1.0)
+
+    def test_precision_correct(self):
+        predicted_stops = [
+            AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15))
+        ]
+
+        precision, recall = self.test_file.get_precision_recall(predicted_stops)
+        self.assertEqual(precision, 1.0)
+        self.assertEqual(recall, 0.5)
+
+        predicted_stops = [
+            AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30))
+        ]
+
+        precision, recall = self.test_file.get_precision_recall(predicted_stops)
+        self.assertEqual(precision, 1.0)
+        self.assertEqual(recall, 0.5)
+
+    def test_recall_correct(self):
+        predicted_stops = [
+            AnnotatedStop(datetime.utcfromtimestamp(0), datetime.utcfromtimestamp(5)),
+            AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15)),
+            AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
+        ]
+
+        precision, recall = self.test_file.get_precision_recall(predicted_stops)
+        self.assertEqual(precision, 2/3)
         self.assertEqual(recall, 1.0)
 
 

@@ -275,6 +275,9 @@ class DVDTFile:
 
         i = 0
         for ts in true_stops:
+            if i == len(predicted_stops):
+                # make sure to increment false negatives if there are no more predicted stops
+                fn += 1
             while i < len(predicted_stops):
                 if ts.max_margin(predicted_stops[i]) < allowed_margin:
                     tp += 1
