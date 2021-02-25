@@ -24,8 +24,8 @@ class AnnotatedStop:
 
     @classmethod
     def from_json(cls, json_dict: Dict):
-        start_time = datetime.fromtimestamp(json_dict["startTime"] / 1000)
-        end_time = datetime.fromtimestamp(json_dict["endTime"] / 1000)
+        start_time = datetime.utcfromtimestamp(json_dict["startTime"] / 1000)
+        end_time = datetime.utcfromtimestamp(json_dict["endTime"] / 1000)
         return AnnotatedStop(start_time, end_time)
 
     @property
@@ -53,8 +53,8 @@ class DVDTFile:
     @classmethod
     def from_json(cls, json_dict: Dict):
         metadata = json_dict["metadata"]
-        start_time = datetime.fromtimestamp(metadata["timestamp"] / 1000)
-        end_time = datetime.fromtimestamp(metadata["endtime"] / 1000)
+        start_time = datetime.utcfromtimestamp(metadata["timestamp"] / 1000)
+        end_time = datetime.utcfromtimestamp(metadata["endtime"] / 1000)
         num_stations = metadata["numberStations"]
         transport_mode = metadata["transportMode"]
         comment = metadata["comment"]
@@ -182,7 +182,7 @@ class DVDTFile:
                 first_stop_time = next(x[1] for x in current_labels if x[0] < 0.5)
                 stop_windows[-1]["start"] = first_stop_time.to_pydatetime()
             elif (
-                current_sum / smoothing_window_size > threshold_probability
+                current_sum / smoothing_window_size >= threshold_probability
                 and "start" in stop_windows[-1]
                 and "end" not in stop_windows[-1]
             ):
@@ -263,6 +263,38 @@ class DVDTFile:
             base.mark_line(color="orange").encode(y="label"),
             base.mark_line(color="red").encode(y="pred_label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    def get_precision_recall(
+        self, predicted_stops: List[AnnotatedStop], allowed_margin: timedelta = timedelta(seconds=3)
+    ) -> Tuple[float, float]:
+        # get stop timespans
+        fp = 0
+        tp = 0
+        fn = 0
+        true_stops = self.annotated_stops
+
+        i = 0
+        for ts in true_stops:
+            while i < len(predicted_stops):
+                if ts.max_margin(predicted_stops[i]) < allowed_margin:
+                    tp += 1
+                    i += 1
+                    break
+                if predicted_stops[i].start_time > ts.start_time:
+                    fn += 1
+                    break
+                else:
+                    fp += 1
+                    i += 1
+        try:
+            precision = tp / (tp + fp)
+        except ZeroDivisionError:
+            precision = 0
+        try:
+            recall = tp / (tp + fn)
+        except ZeroDivisionError:
+            recall = 0
+        return precision, recall
 
     @property
     def stop_durations(self) -> List[Dict]:

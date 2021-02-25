@@ -68,7 +68,7 @@ class TestModelClassification(TestCase):
         self.dataset = DVDTDataset.from_files([self.test_file])
 
     def test_compute_stops(self):
-        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0]))
+        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 0, 0, 0]))
         predicted_stops = self.test_file.compute_stops(
             model=model,
             model_window_size=2,
@@ -80,10 +80,20 @@ class TestModelClassification(TestCase):
         self.assertEqual(
             predicted_stops,
             [
-                AnnotatedStop(datetime.utcfromtimestamp(8), datetime.utcfromtimestamp(18)),
+                AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15)),
                 AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
             ],
         )
+
+    def test_precision_recall(self):
+        predicted_stops = [
+            AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15)),
+            AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
+        ]
+
+        precision, recall = self.test_file.get_precision_recall(predicted_stops)
+        self.assertEqual(precision, 1.0)
+        self.assertEqual(recall, 1.0)
 
 
 class TestAnnotatedStop(TestCase):
