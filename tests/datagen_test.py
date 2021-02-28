@@ -7,13 +7,12 @@ from tmdprimer.datagen import Sample, LabeledFeature, Dataset, make_sliding_wind
 
 
 class DatagenTest(TestCase):
-
     def test_generate_sample(self):
         sample = generate_sample()
         self.assertLessEqual(len(sample), 2000)
         self.assertGreaterEqual(len(sample), 160)
         # check walk proportion
-        self.assertEqual(sum([f.label for f in sample.features]), len(sample)/2)
+        self.assertEqual(sum([f.label for f in sample.features]), len(sample) / 2)
 
     def test_sample_to_numpy(self):
         sample = Sample([LabeledFeature([x], y) for x, y in zip(range(100), [0] * 100)])
@@ -23,6 +22,38 @@ class DatagenTest(TestCase):
         np_x, np_y = sample.to_numpy(scaler)
         np_true_x = np.arange(0, 100).reshape(-1, 1)
         np_true_y = np.zeros((100, 1), dtype=int)
+        self.assertTrue(np.array_equal(np_x, np_true_x))
+        self.assertTrue(np.array_equal(np_y, np_true_y))
+
+    def test_sample_to_numpy_split_windows(self):
+        sample = Sample([LabeledFeature([x], y) for x, y in zip(range(60), [0] * 100)])
+        # dummy scaler
+        scaler = SimpleNamespace(transform=lambda x: x)
+
+        np_x, np_y = sample.to_numpy_split_windows(window_size=20, scaler=scaler)
+        np_true_x = np.array(
+            [np.arange(0, 20).reshape(-1, 1), np.arange(20, 40).reshape(-1, 1), np.arange(40, 60).reshape(-1, 1)]
+        )
+        np_true_y = [np.zeros((20, 1), dtype=int), np.zeros((20, 1), dtype=int), np.zeros((20, 1), dtype=int)]
+        self.assertTrue(np.array_equal(np_x, np_true_x))
+        self.assertTrue(np.array_equal(np_y, np_true_y))
+
+    def test_sample_to_numpy_sliding_windows(self):
+        sample = Sample([LabeledFeature([x], y) for x, y in zip(range(8), [0] * 8)])
+        # dummy scaler
+        scaler = SimpleNamespace(transform=lambda x: x)
+
+        np_x, np_y = sample.to_numpy_sliding_windows(window_size=5, scaler=scaler)
+        np_true_x = np.array(
+            [
+                np.arange(0, 5).reshape(-1, 1),
+                np.arange(1, 6).reshape(-1, 1),
+                np.arange(2, 7).reshape(-1, 1),
+                np.arange(3, 8).reshape(-1, 1)
+            ]
+        )
+        # we classify the last element here, so it's a single array
+        np_true_y = np.zeros((4, 1), dtype=int)
         self.assertTrue(np.array_equal(np_x, np_true_x))
         self.assertTrue(np.array_equal(np_y, np_true_y))
 
