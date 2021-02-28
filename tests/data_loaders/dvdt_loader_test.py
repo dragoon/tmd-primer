@@ -53,7 +53,7 @@ class TestDVDTLoader(TestCase):
         # labels is (1,)
         self.assertEquals(y[0].shape, (1,))
 
-    def stop_durations_test(self):
+    def test_stop_durations(self):
         durations = self.dataset.stop_durations_df["duration"].to_list()
         self.assertEqual(durations, [timedelta(milliseconds=2)])
 
