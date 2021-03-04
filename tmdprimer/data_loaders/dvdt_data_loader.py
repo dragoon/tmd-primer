@@ -18,6 +18,12 @@ from tmdprimer.datagen import make_sliding_windows
 STOP_LABEL = "stop"
 
 
+def dvdt_stop_classification_mapping(x):
+    if x == STOP_LABEL:
+        return STOP_LABEL
+    return 1
+
+
 @dataclass(frozen=True)
 class AnnotatedStop:
     start_time: datetime
@@ -83,7 +89,9 @@ class DVDTFile(DataFile):
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def to_numpy_sliding_windows(self, window_size: int, label_mapping_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
+    def to_numpy_sliding_windows(
+        self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
+    ) -> Tuple[np.ndarray, np.ndarray]:
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
@@ -331,12 +339,9 @@ class DVDTDataset:
                     result.append(dvdt_file)
         return result
 
-    def to_window_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
-        def label_mapping_func(x):
-            if x == STOP_LABEL:
-                return stop_label
-            return label
-
+    def to_window_tfds(
+        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
+    ) -> tf.data.Dataset:
         def scaled_iter():
             for f in self.dvdt_files:
                 windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
@@ -348,11 +353,9 @@ class DVDTDataset:
             output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
         )
 
-    def to_window_numpy(self, label, window_size, stop_label=0) -> Tuple[np.ndarray, np.ndarray]:
-        def label_mapping_func(x):
-            if x == STOP_LABEL:
-                return stop_label
-            return label
+    def to_window_numpy(
+        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
+    ) -> Tuple[np.ndarray, np.ndarray]:
         result_x = None
         result_y = None
         for f in self.dvdt_files:
