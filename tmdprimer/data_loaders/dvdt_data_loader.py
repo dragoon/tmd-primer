@@ -247,6 +247,7 @@ class DVDTFile:
         height=600,
     ):
         df = self.df[["label", "linear_accel", "time"]].copy()
+        df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
         df["pred_label"] = 1
         predicted_stops = self.compute_stops(
             model,
@@ -255,7 +256,7 @@ class DVDTFile:
             threshold_probability=threshold_probability,
         )
         for s in predicted_stops:
-            df.loc[(df["time"] <= s.end_time) & (df["time"] >= s.start_time), "pred_label"] = 1
+            df.loc[(df["time"] <= s.end_time) & (df["time"] >= s.start_time), "pred_label"] = 0
 
         base = alt.Chart(df).encode(x="time")
         return alt.layer(
