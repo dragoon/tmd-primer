@@ -12,7 +12,7 @@ from zipfile import ZipFile
 import boto3
 import altair as alt
 
-from tmdprimer.data_loaders import DataFile
+from tmdprimer.data_loaders import DataFile, Dataset
 from tmdprimer.datagen import make_sliding_windows
 
 STOP_LABEL = "stop"
@@ -315,17 +315,13 @@ class DVDTFile(DataFile):
 
 
 @dataclass(frozen=True)
-class DVDTDataset:
+class DVDTDataset(Dataset):
     dvdt_files: List[DVDTFile]
 
     @staticmethod
     def load(bucket: str, path: str, labels_to_load: Iterable = None):
         s3client = boto3.client("s3")
         dvdt_files = DVDTDataset._get_dataset(s3client, bucket, path, labels_to_load)
-        return DVDTDataset(dvdt_files)
-
-    @staticmethod
-    def from_files(dvdt_files: List[DVDTFile]):
         return DVDTDataset(dvdt_files)
 
     @staticmethod

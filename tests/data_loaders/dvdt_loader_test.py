@@ -15,7 +15,7 @@ class TestDVDTLoader(TestCase):
         super().setUp()
         file_path = os.path.dirname(os.path.realpath(__file__))
         self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
-        self.dataset = DVDTDataset.from_files([self.test_file])
+        self.dataset = DVDTDataset([self.test_file])
 
     def test_dataset_window_tfds(self):
         window_size = 5
@@ -37,7 +37,7 @@ class TestDVDTLoader(TestCase):
         file_path = os.path.dirname(os.path.realpath(__file__))
         test_file1 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         test_file2 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
-        dataset = DVDTDataset.from_files([test_file1, test_file2])
+        dataset = DVDTDataset([test_file1, test_file2])
         x, y = dataset.to_window_numpy(window_size=5)
         true_windows_len = sum(len(s.df) for s in dataset.dvdt_files) - len(dataset.dvdt_files) * (window_size - 1)
         self.assertEquals(len(x), true_windows_len)
@@ -58,7 +58,7 @@ class TestModelClassification(TestCase):
         super().setUp()
         file_path = os.path.dirname(os.path.realpath(__file__))
         self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data_many_stops.json")))
-        self.dataset = DVDTDataset.from_files([self.test_file])
+        self.dataset = DVDTDataset([self.test_file])
 
     def test_compute_stops(self):
         model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 0, 0, 0]))
