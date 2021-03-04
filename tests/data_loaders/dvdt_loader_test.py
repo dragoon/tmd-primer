@@ -17,13 +17,6 @@ class TestDVDTLoader(TestCase):
         self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         self.dataset = DVDTDataset.from_files([self.test_file])
 
-    def test_sample_windows_x_y(self):
-        features, labels = self.test_file.get_features_labels(label=1, stop_label=0, median_filter_window=1)
-        true_features = np.asarray([[0.04], [0.08], [0.12], [0.16], [0.2], [0.24]])
-        true_labels = np.asarray([[1], [0], [0], [0], [1], [1]])
-        self.assertTrue(np.array_equal(labels, true_labels))
-        self.assertTrue(np.array_equal(features, true_features))
-
     def test_dataset_window_tfds(self):
         window_size = 5
         tfds = list(self.dataset.to_window_tfds(label=1, window_size=5, stop_label=0).as_numpy_iterator())
