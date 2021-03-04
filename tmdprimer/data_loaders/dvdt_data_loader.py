@@ -2,7 +2,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import groupby
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, Callable
 
 import numpy as np
 import tensorflow as tf
@@ -12,6 +12,7 @@ from zipfile import ZipFile
 import boto3
 import altair as alt
 
+from tmdprimer.data_loaders import DataFile
 from tmdprimer.datagen import make_sliding_windows
 
 STOP_LABEL = "stop"
@@ -41,7 +42,7 @@ class AnnotatedStop:
 
 
 @dataclass(frozen=True)
-class DVDTFile:
+class DVDTFile(DataFile):
     start_time: datetime
     end_time: datetime
     num_stations: int
@@ -82,12 +83,12 @@ class DVDTFile:
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def to_numpy_sliding_windows(self, label: int, stop_label: int, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
+    def to_numpy_sliding_windows(self, window_size: int, label_mapping_func: Callable) -> Tuple[np.ndarray, np.ndarray]:
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
 
         # transform label values to integers
-        labels = df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=False).to_numpy()
+        labels = df["label"].apply(label_mapping_func).to_numpy()
 
         # fmt: off
         windows_x = make_sliding_windows(
@@ -98,22 +99,6 @@ class DVDTFile:
         # now we need to select a single label for a window  -- last label since that's what we will be predicting
         windows_y = np.array([x[-1] for x in windows_y], dtype=int)
         return windows_x, windows_y
-
-    def get_features_labels(self, label: int, stop_label: int, median_filter_window=10) -> (np.ndarray, np.ndarray):
-        """
-        :param label:
-        :param stop_label:
-        :param median_filter_window: size of the median filter window for pre-processing
-        :return: feature and label arrays for the file
-        """
-        df = self.df[["label", "linear_accel"]].copy()
-        df["linear_accel_norm"] = self._get_linear_accel_norm()
-        df["median_filter_accel"] = df["linear_accel_norm"].rolling(median_filter_window, center=True).median()
-        df = df.dropna()
-        df["label"].replace({self.transport_mode: label, STOP_LABEL: stop_label}, inplace=True)
-        # fmt: off
-        return df[["median_filter_accel", ]].to_numpy(), df[["label", ]].to_numpy()
-        # fmt: on
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()
@@ -131,8 +116,14 @@ class DVDTFile:
         Computes a base dataframe with model classification results
         """
         df = self.df[["label", "linear_accel", "time"]].copy()
-        df["label"].replace({self.transport_mode: 1, STOP_LABEL: 0}, inplace=True)
-        x, y = self.to_numpy_sliding_windows(label=1, stop_label=0, window_size=window_size)
+
+        def label_mapping_func(label):
+            if label == STOP_LABEL:
+                return 0
+            return 1
+
+        df["label"] = df["label"].apply(label_mapping_func)
+        x, y = self.to_numpy_sliding_windows(window_size=window_size, label_mapping_func=label_mapping_func)
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = (
             # reindex to insert NANs in the beginning
@@ -341,9 +332,14 @@ class DVDTDataset:
         return result
 
     def to_window_tfds(self, label, window_size, stop_label=0) -> tf.data.Dataset:
+        def label_mapping_func(x):
+            if x == STOP_LABEL:
+                return stop_label
+            return label
+
         def scaled_iter():
             for f in self.dvdt_files:
-                windows_x, windows_y = f.to_numpy_sliding_windows(label, stop_label, window_size)
+                windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
                 yield from zip(windows_x, windows_y)
 
         return tf.data.Dataset.from_generator(
@@ -353,10 +349,14 @@ class DVDTDataset:
         )
 
     def to_window_numpy(self, label, window_size, stop_label=0) -> Tuple[np.ndarray, np.ndarray]:
+        def label_mapping_func(x):
+            if x == STOP_LABEL:
+                return stop_label
+            return label
         result_x = None
         result_y = None
         for f in self.dvdt_files:
-            windows_x, windows_y = f.to_numpy_sliding_windows(label, stop_label, window_size)
+            windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
             if result_x is not None:
                 result_x = np.append(result_x, windows_x, axis=0)
                 result_y = np.append(result_y, windows_y, axis=0)
