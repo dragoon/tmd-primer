@@ -20,7 +20,7 @@ STOP_LABEL = "stop"
 
 def dvdt_stop_classification_mapping(x):
     if x == STOP_LABEL:
-        return STOP_LABEL
+        return 0
     return 1
 
 

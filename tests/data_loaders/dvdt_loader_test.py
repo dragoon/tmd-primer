@@ -8,6 +8,26 @@ import numpy as np
 from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset, AnnotatedStop
 
 
+class TestDVDTFile(TestCase):
+    test_file: DVDTFile
+
+    def setUp(self):
+        super().setUp()
+        file_path = os.path.dirname(os.path.realpath(__file__))
+        self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
+
+    def test_to_numpy_sliding_windows(self):
+        window_size = 4
+        # need > 1 file to test
+        x, y = self.test_file.to_numpy_sliding_windows(window_size=window_size)
+        true_windows_len = len(self.test_file.df) - (window_size - 1)
+        self.assertEquals(len(x), true_windows_len)
+        # each element in X has shape of (window_size, 1)
+        self.assertEquals(x[0].shape, (window_size, 1))
+        # labels is (1,)
+        self.assertEquals(y[0].shape, (1,))
+
+
 class TestDVDTLoader(TestCase):
     test_file: DVDTFile
 
@@ -19,7 +39,7 @@ class TestDVDTLoader(TestCase):
 
     def test_dataset_window_tfds(self):
         window_size = 5
-        tfds = list(self.dataset.to_window_tfds(window_size=5).as_numpy_iterator())
+        tfds = list(self.dataset.to_window_tfds(window_size=window_size).as_numpy_iterator())
         true_windows_size = sum(len(s.df) for s in self.dataset.dvdt_files) - len(self.dataset.dvdt_files) * (
             window_size - 1
         )
@@ -91,9 +111,7 @@ class TestModelClassification(TestCase):
         )
         self.assertEqual(
             predicted_stops,
-            [
-                AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(30))
-            ],
+            [AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(30))],
         )
 
     def test_precision_recall_correct(self):
@@ -107,17 +125,13 @@ class TestModelClassification(TestCase):
         self.assertEqual(recall, 1.0)
 
     def test_precision_correct(self):
-        predicted_stops = [
-            AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15))
-        ]
+        predicted_stops = [AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15))]
 
         precision, recall = self.test_file.get_precision_recall(predicted_stops)
         self.assertEqual(precision, 1.0)
         self.assertEqual(recall, 0.5)
 
-        predicted_stops = [
-            AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30))
-        ]
+        predicted_stops = [AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30))]
 
         precision, recall = self.test_file.get_precision_recall(predicted_stops)
         self.assertEqual(precision, 1.0)
@@ -131,7 +145,7 @@ class TestModelClassification(TestCase):
         ]
 
         precision, recall = self.test_file.get_precision_recall(predicted_stops)
-        self.assertEqual(precision, 2/3)
+        self.assertEqual(precision, 2 / 3)
         self.assertEqual(recall, 1.0)
 
 
