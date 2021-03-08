@@ -316,7 +316,7 @@ class DVDTFile(DataFile):
 
 @dataclass(frozen=True)
 class DVDTDataset(Dataset):
-    dvdt_files: List[DVDTFile]
+    data_files: List[DVDTFile]
 
     @staticmethod
     def load(bucket: str, path: str, labels_to_load: Iterable = None):
@@ -339,7 +339,7 @@ class DVDTDataset(Dataset):
         self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
     ) -> tf.data.Dataset:
         def scaled_iter():
-            for f in self.dvdt_files:
+            for f in self.data_files:
                 windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
                 yield from zip(windows_x, windows_y)
 
@@ -354,7 +354,7 @@ class DVDTDataset(Dataset):
     ) -> Tuple[np.ndarray, np.ndarray]:
         result_x = None
         result_y = None
-        for f in self.dvdt_files:
+        for f in self.data_files:
             windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
             if result_x is not None:
                 result_x = np.append(result_x, windows_x, axis=0)
@@ -376,15 +376,3 @@ class DVDTDataset(Dataset):
                     if file.endswith(".json") and "/" not in file:
                         with zip_file.open(file) as accel_json:
                             return DVDTFile.from_json(json.loads(accel_json.read()))
-
-    @property
-    def stop_durations_df(self) -> pd.DataFrame:
-        """
-        collection all durations of stops and non-stops
-        :return: dict with labels as keys and durations list
-        """
-        result = []
-        for f in self.dvdt_files:
-            # ignore first / last durations just in case
-            result.extend(f.stop_durations[1:-1])
-        return pd.DataFrame(result)

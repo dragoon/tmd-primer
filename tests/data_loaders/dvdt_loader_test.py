@@ -40,7 +40,7 @@ class TestDVDTLoader(TestCase):
     def test_dataset_window_tfds(self):
         window_size = 5
         tfds = list(self.dataset.to_window_tfds(window_size=window_size).as_numpy_iterator())
-        true_windows_size = sum(len(s.df) for s in self.dataset.dvdt_files) - len(self.dataset.dvdt_files) * (
+        true_windows_size = sum(len(s.df) for s in self.dataset.data_files) - len(self.dataset.data_files) * (
             window_size - 1
         )
         self.assertEquals(len(tfds), true_windows_size)
@@ -59,7 +59,7 @@ class TestDVDTLoader(TestCase):
         test_file2 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         dataset = DVDTDataset([test_file1, test_file2])
         x, y = dataset.to_window_numpy(window_size=5)
-        true_windows_len = sum(len(s.df) for s in dataset.dvdt_files) - len(dataset.dvdt_files) * (window_size - 1)
+        true_windows_len = sum(len(s.df) for s in dataset.data_files) - len(dataset.data_files) * (window_size - 1)
         self.assertEquals(len(x), true_windows_len)
         # each element in X has shape of (window_size, 1)
         self.assertEquals(x[0].shape, (window_size, 1))

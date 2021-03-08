@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Callable
+from itertools import groupby
+from typing import Callable, List, Dict
 
 import pandas as pd
 import numpy as np
@@ -64,3 +65,19 @@ class SensorLogFile(DataFile):
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    @property
+    def stop_durations(self) -> List[Dict]:
+        """
+        collection all durations of stops and non-stops
+        :return: dict with labels as keys and durations list
+        """
+        result = []
+        for key, group in groupby(self.df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
+            g_list = list(group)
+            if key == 1:
+                key = "stop"
+            else:
+                key = "transport"
+            result.append({"mode": key, "duration": g_list[-1][1] - g_list[0][1]})
+        return result
