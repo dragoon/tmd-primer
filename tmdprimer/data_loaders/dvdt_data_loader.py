@@ -316,31 +316,12 @@ class DVDTDataset(Dataset):
     def to_window_tfds(
         self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
     ) -> tf.data.Dataset:
-        def scaled_iter():
-            for f in self.data_files:
-                windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
-                yield from zip(windows_x, windows_y)
-
-        return tf.data.Dataset.from_generator(
-            scaled_iter,
-            output_types=(tf.float32, tf.int32),
-            output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
-        )
+        return super().to_window_tfds(window_size, label_mapping_func)
 
     def to_window_numpy(
         self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
     ) -> Tuple[np.ndarray, np.ndarray]:
-        result_x = None
-        result_y = None
-        for f in self.data_files:
-            windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
-            if result_x is not None:
-                result_x = np.append(result_x, windows_x, axis=0)
-                result_y = np.append(result_y, windows_y, axis=0)
-            else:
-                result_x = windows_x
-                result_y = windows_y
-        return result_x, result_y
+        return super().to_window_numpy(window_size, label_mapping_func)
 
     @staticmethod
     def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:

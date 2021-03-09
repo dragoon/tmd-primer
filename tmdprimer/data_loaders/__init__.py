@@ -59,13 +59,30 @@ class DataFile(abc.ABC):
 class Dataset(abc.ABC):
     data_files: List[DataFile]
 
-    @abc.abstractmethod
     def to_window_tfds(self, window_size, label_mapping_func: Callable[[str], int]) -> tf.data.Dataset:
-        pass
+        def scaled_iter():
+            for f in self.data_files:
+                windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
+                yield from zip(windows_x, windows_y)
 
-    @abc.abstractmethod
+        return tf.data.Dataset.from_generator(
+            scaled_iter,
+            output_types=(tf.float32, tf.int32),
+            output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
+        )
+
     def to_window_numpy(self, window_size, label_mapping_func: Callable[[str], int]) -> Tuple[np.ndarray, np.ndarray]:
-        pass
+        result_x = None
+        result_y = None
+        for f in self.data_files:
+            windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
+            if result_x is not None:
+                result_x = np.append(result_x, windows_x, axis=0)
+                result_y = np.append(result_y, windows_y, axis=0)
+            else:
+                result_x = windows_x
+                result_y = windows_y
+        return result_x, result_y
 
     @property
     def stop_durations_df(self) -> pd.DataFrame:
