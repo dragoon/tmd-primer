@@ -1,13 +1,12 @@
 import io
 from dataclasses import dataclass
 from itertools import groupby
-from typing import List, Dict, Callable, Tuple
+from typing import List, Dict
 
 import boto3
 import pandas as pd
 import numpy as np
 import altair as alt
-import tensorflow as tf
 
 from tmdprimer.data_loaders import DataFile, Dataset
 
