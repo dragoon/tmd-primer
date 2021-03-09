@@ -1,13 +1,12 @@
 from dataclasses import dataclass
 from itertools import groupby
-from typing import Callable, List, Dict
+from typing import List, Dict
 
 import pandas as pd
 import numpy as np
 import altair as alt
 
 from tmdprimer.data_loaders import DataFile
-from tmdprimer.datagen import make_sliding_windows
 
 
 @dataclass(frozen=True)
@@ -33,21 +32,6 @@ class SensorLogFile(DataFile):
 
     def __post_init__(self):
         self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
-
-    def to_numpy_sliding_windows(self, window_size: int, label_mapping_func: Callable):
-        linear_accel_norm = self._get_linear_accel_norm()
-        df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
-
-        # fmt: off
-        windows_x = make_sliding_windows(
-            df[["linear", ]].to_numpy(), window_size, overlap_size=window_size - 1, flatten_inside_window=False
-        )
-        labels = df["label"].apply(label_mapping_func)
-        # fmt: on
-        windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
-        # now we need to select a single label for a window  -- last label since that's what we will be predicting
-        windows_y = np.array([x[-1] for x in windows_y], dtype=int)
-        return windows_x, windows_y
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()

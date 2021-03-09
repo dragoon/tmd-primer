@@ -13,7 +13,6 @@ import boto3
 import altair as alt
 
 from tmdprimer.data_loaders import DataFile, Dataset
-from tmdprimer.datagen import make_sliding_windows
 
 STOP_LABEL = "stop"
 
@@ -85,21 +84,7 @@ class DVDTFile(DataFile):
     def to_numpy_sliding_windows(
         self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
     ) -> Tuple[np.ndarray, np.ndarray]:
-        linear_accel_norm = self._get_linear_accel_norm()
-        df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
-
-        # transform label values to integers
-        labels = df["label"].apply(label_mapping_func).to_numpy()
-
-        # fmt: off
-        windows_x = make_sliding_windows(
-            df[["linear", ]].to_numpy(), window_size, overlap_size=window_size - 1, flatten_inside_window=False
-        )
-        # fmt: on
-        windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
-        # now we need to select a single label for a window  -- last label since that's what we will be predicting
-        windows_y = np.array([x[-1] for x in windows_y], dtype=int)
-        return windows_x, windows_y
+        return super().to_numpy_sliding_windows(window_size, label_mapping_func)
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()

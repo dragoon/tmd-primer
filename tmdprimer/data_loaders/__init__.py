@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
+from tmdprimer.datagen import make_sliding_windows
+
 
 class DataFile(abc.ABC):
     df: pd.DataFrame
@@ -14,16 +16,24 @@ class DataFile(abc.ABC):
     def get_figure(self, *args, **kwargs):
         pass
 
-    @abc.abstractmethod
     def to_numpy_sliding_windows(
         self, window_size: int, label_mapping_func: Callable[[str], int]
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        :param window_size: size of the sliding window
-        :param label_mapping_func: function mapping raw string label to int type
-        :return:
-        """
-        pass
+        linear_accel_norm = self._get_linear_accel_norm()
+        df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
+
+        # transform label values to integers
+        labels = df["label"].apply(label_mapping_func).to_numpy()
+
+        # fmt: off
+        windows_x = make_sliding_windows(
+            df[["linear", ]].to_numpy(), window_size, overlap_size=window_size - 1, flatten_inside_window=False
+        )
+        # fmt: on
+        windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        # now we need to select a single label for a window  -- last label since that's what we will be predicting
+        windows_y = np.array([x[-1] for x in windows_y], dtype=int)
+        return windows_x, windows_y
 
     @abc.abstractmethod
     def stop_durations(self) -> List[Dict]:
