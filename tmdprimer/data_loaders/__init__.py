@@ -33,6 +33,18 @@ class DataFile(abc.ABC):
         """
         pass
 
+    def _get_linear_accel_norm(self) -> np.array:
+        """
+        :return: linear acceleration mean centered and normalized to input for neural nets
+        """
+        # clip to 0 - 25
+        clipped_accel = np.clip(self.df["linear_accel"], 0, 25)
+        # zero centering
+        clipped_accel -= np.mean(clipped_accel, axis=0)
+        # normalize
+        linear_accel_norm = clipped_accel / np.std(clipped_accel, axis=0)
+        return linear_accel_norm
+
 
 class Dataset(abc.ABC):
     data_files: List[DataFile]

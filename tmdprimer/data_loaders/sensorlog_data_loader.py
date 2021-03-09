@@ -34,13 +34,6 @@ class SensorLogFile(DataFile):
     def __post_init__(self):
         self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
 
-    def _get_linear_accel_norm(self):
-        # clip to 0 - 25
-        clipped_accel = np.clip(self.df["linear_accel"], 0, 25)
-        # make accel between 0 and 1
-        linear_accel_norm = clipped_accel / 25
-        return linear_accel_norm
-
     def to_numpy_sliding_windows(self, window_size: int, label_mapping_func: Callable):
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()

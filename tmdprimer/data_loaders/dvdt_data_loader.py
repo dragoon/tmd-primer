@@ -78,13 +78,6 @@ class DVDTFile(DataFile):
         self.df["time"] = pd.to_datetime(self.df["timestamp"], unit="ms")
         self.df["time_diff"] = self.df["timestamp"].diff()
 
-    def _get_linear_accel_norm(self):
-        # clip to 0 - 25
-        clipped_accel = np.clip(self.df["linear_accel"], 0, 25)
-        # make accel between 0 and 1
-        linear_accel_norm = clipped_accel / 25
-        return linear_accel_norm
-
     @staticmethod
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
