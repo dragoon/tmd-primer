@@ -1,12 +1,15 @@
+import io
 from dataclasses import dataclass
 from itertools import groupby
-from typing import List, Dict
+from typing import List, Dict, Callable, Tuple
 
+import boto3
 import pandas as pd
 import numpy as np
 import altair as alt
+import tensorflow as tf
 
-from tmdprimer.data_loaders import DataFile
+from tmdprimer.data_loaders import DataFile, Dataset
 
 
 @dataclass(frozen=True)
@@ -58,3 +61,31 @@ class SensorLogFile(DataFile):
                 key = "transport"
             result.append({"mode": key, "duration": g_list[-1][1] - g_list[0][1]})
         return result
+
+
+@dataclass(frozen=True)
+class SensorLogDataset(Dataset):
+    data_files: List[SensorLogFile]
+
+    @staticmethod
+    def load(bucket: str, path: str):
+        s3client = boto3.client("s3")
+        dvdt_files = SensorLogDataset._get_dataset(s3client, bucket, path)
+        return SensorLogDataset(dvdt_files)
+
+    @staticmethod
+    def _get_dataset(s3client, bucket: str, path: str) -> List[SensorLogFile]:
+        result = []
+        for entry in s3client.list_objects(Bucket=bucket, Prefix=path)["Contents"]:
+            file_name = entry["Key"]
+            if file_name.endswith(".csv"):
+                data_file = SensorLogDataset._load_data_file(s3client, bucket, file_name)
+                result.append(data_file)
+        return result
+
+    @staticmethod
+    def _load_data_file(s3client, bucket, file_name) -> SensorLogFile:
+        print("loading", file_name)
+        response = s3client.get_object(Bucket=bucket, Key=file_name)
+        with io.BytesIO(response["Body"].read()) as datafile:
+            return SensorLogFile.from_csv(pd.read_csv(datafile, sep=';'))
