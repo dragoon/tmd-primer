@@ -21,7 +21,7 @@ class DataFile(abc.ABC):
         pass
 
     def to_numpy_sliding_windows(
-        self, window_size: int, label_mapping_func: Callable[[str], int] = identity
+        self, window_size: int, label_mapping_func: Callable[[Any], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
@@ -63,7 +63,7 @@ class DataFile(abc.ABC):
 class Dataset(abc.ABC):
     data_files: List[DataFile]
 
-    def to_window_tfds(self, window_size, label_mapping_func: Callable[[str], int]) -> tf.data.Dataset:
+    def to_window_tfds(self, window_size, label_mapping_func: Callable[[Any], int]) -> tf.data.Dataset:
         def scaled_iter():
             for f in self.data_files:
                 windows_x, windows_y = f.to_numpy_sliding_windows(window_size, label_mapping_func)
@@ -76,7 +76,7 @@ class Dataset(abc.ABC):
         )
 
     def to_window_numpy(
-        self, window_size, label_mapping_func: Callable[[str], int] = identity
+        self, window_size, label_mapping_func: Callable[[Any], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:
         result_x = None
         result_y = None
