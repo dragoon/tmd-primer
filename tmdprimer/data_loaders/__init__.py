@@ -1,11 +1,15 @@
 import abc
-from typing import Tuple, Callable, List, Dict
+from typing import Tuple, Callable, List, Dict, Any
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 
 from tmdprimer.datagen import make_sliding_windows
+
+
+def identity(x: Any) -> Any:
+    return x
 
 
 class DataFile(abc.ABC):
@@ -17,7 +21,7 @@ class DataFile(abc.ABC):
         pass
 
     def to_numpy_sliding_windows(
-        self, window_size: int, label_mapping_func: Callable[[str], int]
+        self, window_size: int, label_mapping_func: Callable[[str], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
@@ -71,7 +75,9 @@ class Dataset(abc.ABC):
             output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
         )
 
-    def to_window_numpy(self, window_size, label_mapping_func: Callable[[str], int]) -> Tuple[np.ndarray, np.ndarray]:
+    def to_window_numpy(
+        self, window_size, label_mapping_func: Callable[[str], int] = identity
+    ) -> Tuple[np.ndarray, np.ndarray]:
         result_x = None
         result_y = None
         for f in self.data_files:
