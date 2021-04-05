@@ -328,6 +328,11 @@ class DVDTDataset(Dataset):
     ) -> Tuple[np.ndarray, np.ndarray]:
         return super().to_window_numpy(window_size, label_mapping_func)
 
+    def to_split_windows_numpy(
+        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        return super().to_split_windows_numpy(window_size, label_mapping_func)
+
     @staticmethod
     def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
         print("loading", file_name)
