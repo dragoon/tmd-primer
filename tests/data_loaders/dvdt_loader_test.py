@@ -18,7 +18,6 @@ class TestDVDTFile(TestCase):
 
     def test_to_numpy_sliding_windows(self):
         window_size = 4
-        # need > 1 file to test
         x, y = self.test_file.to_numpy_sliding_windows(window_size=window_size)
         true_windows_len = len(self.test_file.df) - (window_size - 1)
         self.assertEquals(len(x), true_windows_len)
@@ -26,6 +25,16 @@ class TestDVDTFile(TestCase):
         self.assertEquals(x[0].shape, (window_size, 1))
         # labels is (1,)
         self.assertEquals(y[0].shape, (1,))
+
+    def test_to_numpy_split_windows(self):
+        window_size = 4
+        x, y = self.test_file.to_numpy_split_windows(window_size=window_size)
+        true_windows_len = len(self.test_file.df) // window_size
+        self.assertEquals(len(x), true_windows_len)
+        # each element in X has shape of (window_size, 1)
+        self.assertEquals(x[0].shape, (window_size, 1))
+        # labels here is the same
+        self.assertEquals(y[0].shape, (window_size, 1))
 
 
 class TestDVDTLoader(TestCase):

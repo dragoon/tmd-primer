@@ -81,6 +81,11 @@ class DVDTFile(DataFile):
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
+    def to_numpy_split_windows(
+        self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        return super().to_numpy_split_windows(window_size, label_mapping_func)
+
     def to_numpy_sliding_windows(
         self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
     ) -> Tuple[np.ndarray, np.ndarray]:

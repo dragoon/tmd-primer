@@ -20,8 +20,8 @@ class DataFile(abc.ABC):
     def get_figure(self, *args, **kwargs):
         pass
 
-    def to_numpy_sliding_windows(
-        self, window_size: int, label_mapping_func: Callable[[Any], int] = identity
+    def _to_windows(
+        self, window_size: int, overlap_size: int, label_mapping_func: Callable[[Any], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:
         linear_accel_norm = self._get_linear_accel_norm()
         df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
@@ -31,12 +31,25 @@ class DataFile(abc.ABC):
 
         # fmt: off
         windows_x = make_sliding_windows(
-            df[["linear", ]].to_numpy(), window_size, overlap_size=window_size - 1, flatten_inside_window=False
+            df[["linear", ]].to_numpy(), window_size, overlap_size=overlap_size, flatten_inside_window=False
         )
         # fmt: on
-        windows_y = make_sliding_windows(labels, window_size, overlap_size=window_size - 1, flatten_inside_window=False)
+        windows_y = make_sliding_windows(labels, window_size, overlap_size=overlap_size, flatten_inside_window=False)
+        return windows_x, windows_y
+
+    def to_numpy_split_windows(
+        self, window_size: int, label_mapping_func: Callable[[Any], int] = identity
+    ) -> Tuple[np.ndarray, np.ndarray]:
+
+        return self._to_windows(window_size, 0, label_mapping_func)
+
+    def to_numpy_sliding_windows(
+        self, window_size: int, label_mapping_func: Callable[[Any], int] = identity
+    ) -> Tuple[np.ndarray, np.ndarray]:
+
+        windows_x, windows_y = self._to_windows(window_size, window_size - 1, label_mapping_func)
         # now we need to select a single label for a window  -- last label since that's what we will be predicting
-        windows_y = np.array([x[-1] for x in windows_y], dtype=int)
+        windows_y = np.array([x[window_size // 2] for x in windows_y], dtype=int)
         return windows_x, windows_y
 
     @abc.abstractmethod
