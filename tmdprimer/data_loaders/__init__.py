@@ -88,6 +88,21 @@ class Dataset(abc.ABC):
             output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
         )
 
+    def to_split_windows_numpy(
+        self, window_size, label_mapping_func: Callable[[Any], int] = identity
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        result_x = None
+        result_y = None
+        for f in self.data_files:
+            windows_x, windows_y = f.to_numpy_split_windows(window_size, label_mapping_func)
+            if result_x is not None:
+                result_x = np.append(result_x, windows_x, axis=0)
+                result_y = np.append(result_y, windows_y, axis=0)
+            else:
+                result_x = windows_x
+                result_y = windows_y
+        return result_x, result_y
+
     def to_window_numpy(
         self, window_size, label_mapping_func: Callable[[Any], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:

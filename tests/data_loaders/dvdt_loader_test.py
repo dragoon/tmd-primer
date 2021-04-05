@@ -46,7 +46,7 @@ class TestDVDTLoader(TestCase):
         self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
         self.dataset = DVDTDataset([self.test_file])
 
-    def test_dataset_window_tfds(self):
+    def test_to_window_tfds(self):
         window_size = 5
         tfds = list(self.dataset.to_window_tfds(window_size=window_size).as_numpy_iterator())
         true_windows_size = sum(len(s.df) for s in self.dataset.data_files) - len(self.dataset.data_files) * (
@@ -60,7 +60,7 @@ class TestDVDTLoader(TestCase):
         # labels is (1,)
         self.assertEquals(tfds[0][1].shape, (1,))
 
-    def test_dataset_window_numpy(self):
+    def test_to_overlapping_window_numpy(self):
         window_size = 5
         # need > 1 file to test
         file_path = os.path.dirname(os.path.realpath(__file__))
@@ -74,6 +74,21 @@ class TestDVDTLoader(TestCase):
         self.assertEquals(x[0].shape, (window_size, 1))
         # labels is (1,)
         self.assertEquals(y[0].shape, (1,))
+
+    def test_to_split_window_numpy(self):
+        window_size = 5
+        # need > 1 file to test
+        file_path = os.path.dirname(os.path.realpath(__file__))
+        test_file1 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
+        test_file2 = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data.json")))
+        dataset = DVDTDataset([test_file1, test_file2])
+        x, y = dataset.to_split_windows_numpy(window_size=5)
+        true_windows_len = sum(len(s.df)//window_size for s in dataset.data_files)
+        self.assertEquals(len(x), true_windows_len)
+        # each element in X has shape of (window_size, 1)
+        self.assertEquals(x[0].shape, (window_size, 1))
+        # labels is (1,)
+        self.assertEquals(y[0].shape, (window_size, 1))
 
     def test_stop_durations(self):
         durations = self.dataset.stop_durations_df["duration"].to_list()
