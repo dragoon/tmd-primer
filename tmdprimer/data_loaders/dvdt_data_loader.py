@@ -13,6 +13,7 @@ import boto3
 import altair as alt
 
 from tmdprimer.data_loaders import DataFile, Dataset
+from tmdprimer.stop_classification.domain.metrics import ClassificationMetric
 
 STOP_LABEL = "stop"
 
@@ -247,9 +248,9 @@ class DVDTFile(DataFile):
             base.mark_line(color="red").encode(y="pred_label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
-    def get_precision_recall(
+    def get_metrics(
         self, predicted_stops: List[AnnotatedStop], allowed_margin: timedelta = timedelta(seconds=3)
-    ) -> Tuple[float, float]:
+    ) -> ClassificationMetric:
         # get stop timespans
         fp = 0
         tp = 0
@@ -272,15 +273,7 @@ class DVDTFile(DataFile):
                 else:
                     fp += 1
                     i += 1
-        try:
-            precision = tp / (tp + fp)
-        except ZeroDivisionError:
-            precision = 0
-        try:
-            recall = tp / (tp + fn)
-        except ZeroDivisionError:
-            recall = 0
-        return precision, recall
+        return ClassificationMetric(tp, fn, fp)
 
     @property
     def stop_durations(self) -> List[Dict]:

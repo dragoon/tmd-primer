@@ -105,7 +105,7 @@ class TestModelClassification(TestCase):
         self.dataset = DVDTDataset([self.test_file])
 
     def test_compute_stops(self):
-        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 0, 0, 0]))
+        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 1, 0, 0, 1, 1, 0, 0]))
         predicted_stops = self.test_file.compute_stops(
             model=model,
             model_window_size=2,
@@ -123,7 +123,7 @@ class TestModelClassification(TestCase):
         )
 
     def test_compute_stops_with_merging(self):
-        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 0, 0, 1, 1, 0, 0, 0]))
+        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 1, 0, 0, 1, 1, 0, 0]))
         predicted_stops = self.test_file.compute_stops(
             model=model,
             model_window_size=2,
@@ -144,22 +144,25 @@ class TestModelClassification(TestCase):
             AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
         ]
 
-        precision, recall = self.test_file.get_precision_recall(predicted_stops)
-        self.assertEqual(precision, 1.0)
-        self.assertEqual(recall, 1.0)
+        metric = self.test_file.get_metrics(predicted_stops)
+        self.assertEqual(metric.tp, 2)
+        self.assertEqual(metric.fp, 0)
+        self.assertEqual(metric.fn, 0)
 
     def test_precision_correct(self):
         predicted_stops = [AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15))]
 
-        precision, recall = self.test_file.get_precision_recall(predicted_stops)
-        self.assertEqual(precision, 1.0)
-        self.assertEqual(recall, 0.5)
+        metric = self.test_file.get_metrics(predicted_stops)
+        self.assertEqual(metric.tp, 1)
+        self.assertEqual(metric.fp, 0)
+        self.assertEqual(metric.fn, 1)
 
         predicted_stops = [AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30))]
 
-        precision, recall = self.test_file.get_precision_recall(predicted_stops)
-        self.assertEqual(precision, 1.0)
-        self.assertEqual(recall, 0.5)
+        metric = self.test_file.get_metrics(predicted_stops)
+        self.assertEqual(metric.tp, 1)
+        self.assertEqual(metric.fp, 0)
+        self.assertEqual(metric.fn, 1)
 
     def test_recall_correct(self):
         predicted_stops = [
@@ -168,9 +171,10 @@ class TestModelClassification(TestCase):
             AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
         ]
 
-        precision, recall = self.test_file.get_precision_recall(predicted_stops)
-        self.assertEqual(precision, 2 / 3)
-        self.assertEqual(recall, 1.0)
+        metric = self.test_file.get_metrics(predicted_stops)
+        self.assertEqual(metric.tp, 2)
+        self.assertEqual(metric.fp, 1)
+        self.assertEqual(metric.fn, 0)
 
 
 class TestAnnotatedStop(TestCase):
