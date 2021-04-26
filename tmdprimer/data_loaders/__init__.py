@@ -23,8 +23,7 @@ class DataFile(abc.ABC):
     def _to_windows(
         self, window_size: int, overlap_size: int, label_mapping_func: Callable[[Any], int] = identity
     ) -> Tuple[np.ndarray, np.ndarray]:
-        linear_accel_norm = self._get_linear_accel_norm()
-        df = pd.DataFrame({"linear": linear_accel_norm, "label": self.df["label"]}).dropna()
+        df = pd.DataFrame({"linear": self.df["linear_accel"], "label": self.df["label"]}).dropna()
 
         # transform label values to integers
         labels = df["label"].apply(label_mapping_func).to_numpy()
@@ -59,18 +58,6 @@ class DataFile(abc.ABC):
         :return: dict with labels as keys and durations list
         """
         pass
-
-    def _get_linear_accel_norm(self) -> np.array:
-        """
-        :return: linear acceleration mean centered and normalized to input for neural nets
-        """
-        # clip to 0 - 25
-        clipped_accel = np.clip(self.df["linear_accel"], 0, 25)
-        # zero centering
-        clipped_accel -= np.mean(clipped_accel, axis=0)
-        # normalize
-        linear_accel_norm = clipped_accel / np.std(clipped_accel, axis=0)
-        return linear_accel_norm
 
 
 class Dataset(abc.ABC):
