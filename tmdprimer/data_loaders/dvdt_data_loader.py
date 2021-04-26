@@ -117,9 +117,9 @@ class DVDTFile(DataFile):
         x, y = self.to_numpy_sliding_windows(window_size=window_size, label_mapping_func=label_mapping_func)
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = (
-            # reindex to insert NANs in the beginning
             pd.Series(pred_y.flatten())
-            .reindex(range(len(pred_y) - len(df), len(pred_y)))
+            # reindex to insert NANs in the beginning, adjust for predicting middle element
+            .reindex(range(len(pred_y) - len(df) + window_size//2, len(pred_y)))
             .reset_index(drop=True)
         )
         # fill the first window with 1 -- no stop
