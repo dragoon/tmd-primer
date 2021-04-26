@@ -39,12 +39,13 @@ class AnnotatedStop:
     def duration(self) -> timedelta:
         return self.end_time - self.start_time
 
-    def max_margin(self, other: "AnnotatedStop") -> timedelta:
+    def overlap_percent(self, other: "AnnotatedStop") -> float:
         """
         Calculates maximum time different for another annotated stop on both sides
         Used to compute metrics
         """
-        return max(abs(self.start_time - other.start_time), abs(self.end_time - other.end_time))
+        overlap = min(self.end_time, other.end_time) - max(self.start_time, other.start_time)
+        return overlap / self.duration
 
 
 @dataclass(frozen=True)
@@ -249,7 +250,7 @@ class DVDTFile(DataFile):
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
     def get_metrics(
-        self, predicted_stops: List[AnnotatedStop], allowed_margin: timedelta = timedelta(seconds=3)
+        self, predicted_stops: List[AnnotatedStop], min_allowed_overlap: float = 0.8
     ) -> ClassificationMetric:
         # get stop timespans
         fp = 0
@@ -263,7 +264,7 @@ class DVDTFile(DataFile):
                 # make sure to increment false negatives if there are no more predicted stops
                 fn += 1
             while i < len(predicted_stops):
-                if ts.max_margin(predicted_stops[i]) < allowed_margin:
+                if ts.overlap_percent(predicted_stops[i]) > min_allowed_overlap:
                     tp += 1
                     i += 1
                     break

@@ -182,15 +182,15 @@ class TestAnnotatedStop(TestCase):
         as1 = AnnotatedStop(datetime.fromtimestamp(1), datetime.fromtimestamp(10))
         as2 = AnnotatedStop(datetime.fromtimestamp(5), datetime.fromtimestamp(15))
 
-        margin = as1.max_margin(as2)
-        self.assertEqual(margin, timedelta(seconds=5))
+        overlap = as1.overlap_percent(as2)
+        self.assertAlmostEqual(overlap, 0.5555, places=3)
 
     def test_max_margin_non_overlap(self):
         as1 = AnnotatedStop(datetime.fromtimestamp(1), datetime.fromtimestamp(10))
         as2 = AnnotatedStop(datetime.fromtimestamp(11), datetime.fromtimestamp(15))
 
-        margin = as1.max_margin(as2)
-        self.assertEqual(margin, timedelta(seconds=10))
+        overlap = as1.overlap_percent(as2)
+        self.assertAlmostEqual(overlap, -0.1111, places=3)
 
 
 if __name__ == "__main__":
