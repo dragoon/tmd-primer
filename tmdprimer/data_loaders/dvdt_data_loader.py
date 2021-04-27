@@ -45,7 +45,7 @@ class AnnotatedStop:
         Used to compute metrics
         """
         overlap = min(self.end_time, other.end_time) - max(self.start_time, other.start_time)
-        return overlap / self.duration
+        return overlap / min(self.duration, other.duration)
 
 
 @dataclass(frozen=True)

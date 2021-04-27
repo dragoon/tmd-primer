@@ -190,7 +190,7 @@ class TestAnnotatedStop(TestCase):
         as2 = AnnotatedStop(datetime.fromtimestamp(11), datetime.fromtimestamp(15))
 
         overlap = as1.overlap_percent(as2)
-        self.assertAlmostEqual(overlap, -0.1111, places=3)
+        self.assertAlmostEqual(overlap, -0.25, places=3)
 
 
 if __name__ == "__main__":
