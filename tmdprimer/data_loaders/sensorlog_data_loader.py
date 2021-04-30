@@ -1,19 +1,20 @@
 import io
 from dataclasses import dataclass
 from itertools import groupby
-from typing import List, Dict
+from typing import List, Dict, Callable
 
 import boto3
 import pandas as pd
 import numpy as np
 import altair as alt
 
-from tmdprimer.data_loaders import DataFile, Dataset
+from tmdprimer.data_loaders import DataFile, Dataset, identity
 
 
 @dataclass(frozen=True)
 class SensorLogFile(DataFile):
     df: pd.DataFrame
+    label_mapping_func: Callable[[str], int] = identity
 
     @classmethod
     def from_csv(cls, csv: pd.DataFrame):

@@ -57,6 +57,7 @@ class DVDTFile(DataFile):
     comment: str
     annotated_stops: List[AnnotatedStop]
     df: pd.DataFrame
+    label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
 
     @classmethod
     def from_json(cls, json_dict: Dict):
@@ -83,15 +84,11 @@ class DVDTFile(DataFile):
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
         return input_data.rolling(window_size).quantile(quantile)
 
-    def to_numpy_split_windows(
-        self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        return super().to_numpy_split_windows(window_size, label_mapping_func)
+    def to_numpy_split_windows(self, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
+        return super().to_numpy_split_windows(window_size)
 
-    def to_numpy_sliding_windows(
-        self, window_size: int, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        return super().to_numpy_sliding_windows(window_size, label_mapping_func)
+    def to_numpy_sliding_windows(self, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
+        return super().to_numpy_sliding_windows(window_size)
 
     def get_figure(self, width=800, height=600):
         df = self.df[["label", "linear_accel", "time"]].copy()
@@ -116,13 +113,12 @@ class DVDTFile(DataFile):
             return 1
 
         df["label"] = df["label"].apply(label_mapping_func)
-        x, y = self.to_numpy_sliding_windows(window_size=window_size, label_mapping_func=label_mapping_func)
+        x, y = self.to_numpy_sliding_windows(window_size=window_size)
         pred_y = model.predict(x)
         df.loc[:, "pred_label"] = (
             pd.Series(pred_y.flatten())
             # reindex to insert NANs in the beginning, adjust for predicting middle element
-            .reindex(range(len(pred_y) - len(df) + window_size//2, len(pred_y)))
-            .reset_index(drop=True)
+            .reindex(range(len(pred_y) - len(df) + window_size // 2, len(pred_y))).reset_index(drop=True)
         )
         # fill the first window with 1 -- no stop
         df.fillna(1, inplace=True)
@@ -311,21 +307,6 @@ class DVDTDataset(Dataset):
                 if labels_to_load is None or dvdt_file.transport_mode in labels_to_load:
                     result.append(dvdt_file)
         return result
-
-    def to_window_tfds(
-        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
-    ) -> tf.data.Dataset:
-        return super().to_window_tfds(window_size, label_mapping_func)
-
-    def to_window_numpy(
-        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        return super().to_window_numpy(window_size, label_mapping_func)
-
-    def to_split_windows_numpy(
-        self, window_size, label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        return super().to_split_windows_numpy(window_size, label_mapping_func)
 
     @staticmethod
     def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
