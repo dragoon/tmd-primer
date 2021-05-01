@@ -1,7 +1,7 @@
-numpy~=1.19.4
+numpy
 tensorflow==2.4.1;python_version <= '3.8'
 tensorflow;python_version > '3.8'
-altair~=4.1.0
-pandas~=0.25.3
-scikit-learn~=0.22.1
-boto3~=1.14.52
+altair
+pandas
+scikit-learn
+boto3
