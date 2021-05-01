@@ -1,9 +1,7 @@
 import os
 import json
 from datetime import timedelta, datetime
-from types import SimpleNamespace
 from unittest import TestCase, main
-import numpy as np
 
 from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset, AnnotatedStop
 
@@ -95,7 +93,7 @@ class TestDVDTLoader(TestCase):
         self.assertEqual(durations, [timedelta(milliseconds=2)])
 
 
-class TestModelClassification(TestCase):
+class TestMetrics(TestCase):
     test_file: DVDTFile
 
     def setUp(self):
@@ -103,40 +101,6 @@ class TestModelClassification(TestCase):
         file_path = os.path.dirname(os.path.realpath(__file__))
         self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data_many_stops.json")))
         self.dataset = DVDTDataset([self.test_file])
-
-    def test_compute_stops(self):
-        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 1, 0, 0, 1, 1, 0, 0]))
-        predicted_stops = self.test_file.compute_stops(
-            model=model,
-            model_window_size=2,
-            smoothing_window_size=2,
-            threshold_probability=0.5,
-            min_stop_duration=timedelta(seconds=3),
-            min_interval_between_stops=timedelta(seconds=5),
-        )
-        self.assertEqual(
-            predicted_stops,
-            [
-                AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(15)),
-                AnnotatedStop(datetime.utcfromtimestamp(25), datetime.utcfromtimestamp(30)),
-            ],
-        )
-
-    def test_compute_stops_with_merging(self):
-        model = SimpleNamespace(predict=lambda np_array: np.array([1, 1, 1, 1, 0, 0, 1, 1, 0, 0]))
-        predicted_stops = self.test_file.compute_stops(
-            model=model,
-            model_window_size=2,
-            smoothing_window_size=2,
-            threshold_probability=0.5,
-            min_stop_duration=timedelta(seconds=3),
-            # min interval is > than the time between stops
-            min_interval_between_stops=timedelta(seconds=11),
-        )
-        self.assertEqual(
-            predicted_stops,
-            [AnnotatedStop(datetime.utcfromtimestamp(10), datetime.utcfromtimestamp(30))],
-        )
 
     def test_precision_recall_correct(self):
         predicted_stops = [
