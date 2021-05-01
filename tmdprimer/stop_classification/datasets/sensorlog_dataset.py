@@ -1,9 +1,7 @@
-import io
 from dataclasses import dataclass
 from itertools import groupby
 from typing import List, Dict, Callable
 
-import boto3
 import pandas as pd
 import numpy as np
 import altair as alt
