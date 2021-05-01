@@ -2,7 +2,7 @@ import os
 from unittest import TestCase
 import pandas as pd
 
-from tmdprimer.data_loaders.sensorlog_data_loader import SensorLogFile
+from tmdprimer.stop_classification.datasets.sensorlog_dataset import SensorLogFile
 
 
 class TestSensorLogFile(TestCase):

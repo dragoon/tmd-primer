@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest import TestCase, main
 import numpy as np
 
-from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset, AnnotatedStop
+from tmdprimer.stop_classification.datasets.dvdt_dataset import DVDTFile, DVDTDataset, AnnotatedStop
 from tmdprimer.stop_classification.domain.models import SlidingWindowModel
 
 

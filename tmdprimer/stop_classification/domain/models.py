@@ -7,8 +7,8 @@ import pandas as pd
 import altair as alt
 from dataclasses import dataclass
 
-from tmdprimer.data_loaders import DataFile
-from tmdprimer.data_loaders.dvdt_data_loader import AnnotatedStop
+from tmdprimer.stop_classification.datasets import DataFile
+from tmdprimer.stop_classification.datasets.dvdt_dataset import AnnotatedStop
 
 
 class StopClassificationModel(abc.ABC):

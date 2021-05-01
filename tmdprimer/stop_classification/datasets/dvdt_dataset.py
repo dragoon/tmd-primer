@@ -11,7 +11,7 @@ from zipfile import ZipFile
 import boto3
 import altair as alt
 
-from tmdprimer.data_loaders import DataFile, Dataset
+from tmdprimer.stop_classification.datasets import DataFile, Dataset
 from tmdprimer.stop_classification.domain.metrics import ClassificationMetric
 
 STOP_LABEL = "stop"

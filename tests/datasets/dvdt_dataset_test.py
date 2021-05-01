@@ -3,7 +3,7 @@ import json
 from datetime import timedelta, datetime
 from unittest import TestCase, main
 
-from tmdprimer.data_loaders.dvdt_data_loader import DVDTFile, DVDTDataset, AnnotatedStop
+from tmdprimer.stop_classification.datasets.dvdt_dataset import DVDTFile, DVDTDataset, AnnotatedStop
 
 
 class TestDVDTFile(TestCase):

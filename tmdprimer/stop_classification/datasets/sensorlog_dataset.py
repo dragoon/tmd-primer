@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import altair as alt
 
-from tmdprimer.data_loaders import DataFile, Dataset, identity
+from tmdprimer.stop_classification.datasets import DataFile, Dataset, identity
 
 
 @dataclass(frozen=True)
