@@ -32,7 +32,7 @@ class DVDTLocalDataLoader(DataLoader):
                             return DVDTFile.from_json(json.loads(accel_json.read()))
 
 
-class SensorLogS3DataLoader(DataLoader):
+class SensorLogLocalDataLoader(DataLoader):
     def load_dataset(self, bucket, path: str, labels_to_load: Iterable = None) -> SensorLogDataset:
         files = []
         path = Path(path)
