@@ -12,7 +12,17 @@ from tmdprimer.data_loaders.dvdt_data_loader import AnnotatedStop
 
 
 class StopClassificationModel(abc.ABC):
-    pass
+    @abc.abstractmethod
+    def compute_stops(self, *args, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def predict_figure(self, *args, **kwargs):
+        pass
+
+    @abc.abstractmethod
+    def predict_figure_smoothed(self, *args, **kwargs):
+        pass
 
 
 @dataclass(frozen=True)
