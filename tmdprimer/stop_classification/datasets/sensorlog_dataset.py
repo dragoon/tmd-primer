@@ -66,26 +66,3 @@ class SensorLogFile(DataFile):
 @dataclass(frozen=True)
 class SensorLogDataset(Dataset):
     data_files: List[SensorLogFile]
-
-    @staticmethod
-    def load(bucket: str, path: str):
-        s3client = boto3.client("s3")
-        dvdt_files = SensorLogDataset._get_dataset(s3client, bucket, path)
-        return SensorLogDataset(dvdt_files)
-
-    @staticmethod
-    def _get_dataset(s3client, bucket: str, path: str) -> List[SensorLogFile]:
-        result = []
-        for entry in s3client.list_objects(Bucket=bucket, Prefix=path)["Contents"]:
-            file_name = entry["Key"]
-            if file_name.endswith(".csv"):
-                data_file = SensorLogDataset._load_data_file(s3client, bucket, file_name)
-                result.append(data_file)
-        return result
-
-    @staticmethod
-    def _load_data_file(s3client, bucket, file_name) -> SensorLogFile:
-        print("loading", file_name)
-        response = s3client.get_object(Bucket=bucket, Key=file_name)
-        with io.BytesIO(response["Body"].read()) as datafile:
-            return SensorLogFile.from_csv(pd.read_csv(datafile, sep=';'))

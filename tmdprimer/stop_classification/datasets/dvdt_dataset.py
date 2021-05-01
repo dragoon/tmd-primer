@@ -1,14 +1,10 @@
-import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import groupby
-from typing import Dict, Iterable, List, Tuple, Callable
+from typing import Dict, List, Tuple, Callable
 
 import numpy as np
 import pandas as pd
-import io
-from zipfile import ZipFile
-import boto3
 import altair as alt
 
 from tmdprimer.stop_classification.datasets import DataFile, Dataset
@@ -145,33 +141,3 @@ class DVDTFile(DataFile):
 @dataclass(frozen=True)
 class DVDTDataset(Dataset):
     data_files: List[DVDTFile]
-
-    @staticmethod
-    def load(bucket: str, path: str, labels_to_load: Iterable = None):
-        s3client = boto3.client("s3")
-        dvdt_files = DVDTDataset._get_dataset(s3client, bucket, path, labels_to_load)
-        return DVDTDataset(dvdt_files)
-
-    @staticmethod
-    def _get_dataset(s3client, bucket: str, path: str, labels_to_load: Iterable = None) -> List[DVDTFile]:
-        result = []
-        for entry in s3client.list_objects(Bucket=bucket, Prefix=path)["Contents"]:
-            file_name = entry["Key"]
-            if file_name.endswith("high.zip"):
-                dvdt_file = DVDTDataset._load_dvdt_file(s3client, bucket, file_name)
-                if labels_to_load is None or dvdt_file.transport_mode in labels_to_load:
-                    result.append(dvdt_file)
-        return result
-
-    @staticmethod
-    def _load_dvdt_file(s3client, bucket, file_name) -> DVDTFile:
-        print("loading", file_name)
-        response = s3client.get_object(Bucket=bucket, Key=file_name)
-        with io.BytesIO(response["Body"].read()) as datafile:
-            # rewind the file
-            datafile.seek(0)
-            with ZipFile(datafile, mode="r") as zip_file:
-                for file in zip_file.namelist():
-                    if file.endswith(".json") and "/" not in file:
-                        with zip_file.open(file) as accel_json:
-                            return DVDTFile.from_json(json.loads(accel_json.read()))
