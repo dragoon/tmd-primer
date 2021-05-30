@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from itertools import groupby
 from typing import Dict, List, Tuple, Callable
 
@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import altair as alt
 
-from tmdprimer.stop_classification.datasets import DataFile, Dataset
+from tmdprimer.stop_classification.datasets import DataFile, Dataset, AnnotatedStop
 from tmdprimer.stop_classification.domain.metrics import ClassificationMetric
 
 STOP_LABEL = "stop"
@@ -17,30 +17,6 @@ def dvdt_stop_classification_mapping(x):
     if x == STOP_LABEL:
         return 0
     return 1
-
-
-@dataclass(frozen=True)
-class AnnotatedStop:
-    start_time: datetime
-    end_time: datetime
-
-    @classmethod
-    def from_json(cls, json_dict: Dict):
-        start_time = datetime.utcfromtimestamp(json_dict["startTime"] / 1000)
-        end_time = datetime.utcfromtimestamp(json_dict["endTime"] / 1000)
-        return AnnotatedStop(start_time, end_time)
-
-    @property
-    def duration(self) -> timedelta:
-        return self.end_time - self.start_time
-
-    def overlap_percent(self, other: "AnnotatedStop") -> float:
-        """
-        Calculates maximum time different for another annotated stop on both sides
-        Used to compute metrics
-        """
-        overlap = min(self.end_time, other.end_time) - max(self.start_time, other.start_time)
-        return overlap / min(self.duration, other.duration)
 
 
 @dataclass(frozen=True)

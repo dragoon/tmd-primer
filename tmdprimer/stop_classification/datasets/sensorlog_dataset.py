@@ -6,11 +6,12 @@ import pandas as pd
 import numpy as np
 import altair as alt
 
-from tmdprimer.stop_classification.datasets import DataFile, Dataset, identity
+from tmdprimer.stop_classification.datasets import DataFile, Dataset, identity, AnnotatedStop
 
 
 @dataclass(frozen=True)
 class SensorLogFile(DataFile):
+    annotated_stops: List[AnnotatedStop]
     df: pd.DataFrame
     label_mapping_func: Callable[[str], int] = identity
 
@@ -29,7 +30,8 @@ class SensorLogFile(DataFile):
             inplace=True,
         )
         df["time"] = pd.to_datetime(csv["loggingTime(txt)"], infer_datetime_format=True)
-        return SensorLogFile(df)
+        annotated_stops = SensorLogFile._compute_annotated_stops(df)
+        return SensorLogFile(annotated_stops, df)
 
     def __post_init__(self):
         self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
@@ -43,6 +45,19 @@ class SensorLogFile(DataFile):
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+    @staticmethod
+    def _compute_annotated_stops(df: pd.DataFrame) -> List[AnnotatedStop]:
+        """
+        collection all durations of stops and non-stops
+        :return: dict with labels as keys and durations list
+        """
+        result = []
+        for key, group in groupby(df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
+            g_list = list(group)
+            if key == 1:
+                result.append(AnnotatedStop(g_list[0][1], g_list[-1][1]))
+        return result
 
     @property
     def stop_durations(self) -> List[Dict]:

@@ -1,7 +1,9 @@
 import os
 from unittest import TestCase
 import pandas as pd
+from datetime import datetime
 
+from tmdprimer.stop_classification.datasets import AnnotatedStop
 from tmdprimer.stop_classification.datasets.sensorlog_dataset import SensorLogFile
 
 
@@ -23,3 +25,12 @@ class TestSensorLogFile(TestCase):
         self.assertEquals(x[0].shape, (window_size, 1))
         # labels is (1,)
         self.assertEquals(y[0].shape, (1,))
+
+    def test_annotated_stops(self):
+        correct_stops = [
+            AnnotatedStop(
+                datetime.fromisoformat("2021-03-07T18:55:31.417+01:00"),
+                datetime.fromisoformat("2021-03-07 18:55:31.428+01:00"),
+            )
+        ]
+        self.assertEquals(correct_stops, self.test_file.annotated_stops)
