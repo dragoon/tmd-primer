@@ -33,7 +33,7 @@ class DVDTLocalDataLoader(DataLoader):
 
 
 class SensorLogLocalDataLoader(DataLoader):
-    def load_dataset(self, bucket, path: str, labels_to_load: Iterable = None) -> SensorLogDataset:
+    def load_dataset(self, path: str, labels_to_load: Iterable = None) -> SensorLogDataset:
         files = []
         path = Path(path)
         for file_name in os.listdir(path):
