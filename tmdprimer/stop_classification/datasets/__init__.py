@@ -8,6 +8,7 @@ import pandas as pd
 import tensorflow as tf
 
 from tmdprimer.datagen import make_sliding_windows
+from tmdprimer.stop_classification.domain.metrics import ClassificationMetric
 
 
 def identity(x: Any) -> Any:
@@ -71,6 +72,33 @@ class DataFile(abc.ABC):
         # now we need to select a single label for a window  -- last label since that's what we will be predicting
         windows_y = np.array([x[window_size // 2] for x in windows_y], dtype=int)
         return windows_x, windows_y
+
+    def get_metrics(
+        self, predicted_stops: List[AnnotatedStop], min_allowed_overlap: float = 0.8
+    ) -> ClassificationMetric:
+        # get stop timespans
+        fp = 0
+        tp = 0
+        fn = 0
+        true_stops = self.annotated_stops
+
+        i = 0
+        for ts in true_stops:
+            if i == len(predicted_stops):
+                # make sure to increment false negatives if there are no more predicted stops
+                fn += 1
+            while i < len(predicted_stops):
+                if ts.overlap_percent(predicted_stops[i]) > min_allowed_overlap:
+                    tp += 1
+                    i += 1
+                    break
+                if predicted_stops[i].start_time > ts.start_time:
+                    fn += 1
+                    break
+                else:
+                    fp += 1
+                    i += 1
+        return ClassificationMetric(tp, fn, fp)
 
     @abc.abstractmethod
     def stop_durations(self) -> List[Dict]:

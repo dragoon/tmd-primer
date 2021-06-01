@@ -8,7 +8,6 @@ import pandas as pd
 import altair as alt
 
 from tmdprimer.stop_classification.datasets import DataFile, Dataset, AnnotatedStop
-from tmdprimer.stop_classification.domain.metrics import ClassificationMetric
 
 STOP_LABEL = "stop"
 
@@ -71,33 +70,6 @@ class DVDTFile(DataFile):
             base.mark_line(color="cornflowerblue").encode(y="linear_accel"),
             base.mark_line(color="orange").encode(y="label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
-
-    def get_metrics(
-        self, predicted_stops: List[AnnotatedStop], min_allowed_overlap: float = 0.8
-    ) -> ClassificationMetric:
-        # get stop timespans
-        fp = 0
-        tp = 0
-        fn = 0
-        true_stops = self.annotated_stops
-
-        i = 0
-        for ts in true_stops:
-            if i == len(predicted_stops):
-                # make sure to increment false negatives if there are no more predicted stops
-                fn += 1
-            while i < len(predicted_stops):
-                if ts.overlap_percent(predicted_stops[i]) > min_allowed_overlap:
-                    tp += 1
-                    i += 1
-                    break
-                if predicted_stops[i].start_time > ts.start_time:
-                    fn += 1
-                    break
-                else:
-                    fp += 1
-                    i += 1
-        return ClassificationMetric(tp, fn, fp)
 
     @property
     def stop_durations(self) -> List[Dict]:
