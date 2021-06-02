@@ -55,7 +55,7 @@ class SensorLogFile(DataFile):
         result = []
         for key, group in groupby(df[["label", "time"]].values.tolist(), key=lambda x: x[0]):
             g_list = list(group)
-            if key == 1:
+            if key == 0:
                 result.append(AnnotatedStop(g_list[0][1], g_list[-1][1]))
         return result
 
