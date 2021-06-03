@@ -29,8 +29,12 @@ class TestSensorLogFile(TestCase):
     def test_annotated_stops(self):
         correct_stops = [
             AnnotatedStop(
-                datetime.fromisoformat("2021-03-07T18:55:31.417+01:00"),
-                datetime.fromisoformat("2021-03-07 18:55:31.428+01:00"),
+                datetime.fromisoformat("2021-03-07T18:55:31.390+01:00"),
+                datetime.fromisoformat("2021-03-07 18:55:31.411+01:00"),
+            ),
+            AnnotatedStop(
+                datetime.fromisoformat("2021-03-07T18:55:31.437+01:00"),
+                datetime.fromisoformat("2021-03-07 18:55:31.467+01:00"),
             )
         ]
         self.assertEquals(correct_stops, self.test_file.annotated_stops)
