@@ -113,17 +113,16 @@ class Dataset(abc.ABC):
     data_files: List[DataFile]
 
     def to_sliding_windows_tfds(self, window_size) -> tf.data.Dataset:
-        feature_n = len(self.data_files[0].to_numpy_sliding_windows(window_size)[0][0])
 
-        def scaled_iter():
+        def _iter():
             for f in self.data_files:
                 windows_x, windows_y = f.to_numpy_sliding_windows(window_size)
                 yield from zip(windows_x, windows_y)
 
         return tf.data.Dataset.from_generator(
-            scaled_iter,
+            _iter,
             output_signature=(
-                tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
+                tf.TensorSpec(shape=(window_size, 1), dtype=tf.float32),
                 tf.TensorSpec(shape=(window_size, 1), dtype=tf.int32),
             ),
         )
