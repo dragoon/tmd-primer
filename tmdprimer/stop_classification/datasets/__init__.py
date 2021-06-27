@@ -69,7 +69,7 @@ class DataFile(abc.ABC):
     def to_numpy_sliding_windows(self, window_size: int) -> Tuple[np.ndarray, np.ndarray]:
 
         windows_x, windows_y = self._to_windows(window_size, window_size - 1)
-        # now we need to select a single label for a window  -- last label since that's what we will be predicting
+        # now we need to select a single label for a window  -- middle label so we have both prev and next data
         windows_y = np.array([x[window_size // 2] for x in windows_y], dtype=int)
         return windows_x, windows_y
 
@@ -112,7 +112,9 @@ class DataFile(abc.ABC):
 class Dataset(abc.ABC):
     data_files: List[DataFile]
 
-    def to_window_tfds(self, window_size) -> tf.data.Dataset:
+    def to_sliding_windows_tfds(self, window_size) -> tf.data.Dataset:
+        feature_n = len(self.data_files[0].to_numpy_sliding_windows(window_size)[0][0])
+
         def scaled_iter():
             for f in self.data_files:
                 windows_x, windows_y = f.to_numpy_sliding_windows(window_size)
@@ -120,8 +122,10 @@ class Dataset(abc.ABC):
 
         return tf.data.Dataset.from_generator(
             scaled_iter,
-            output_types=(tf.float32, tf.int32),
-            output_shapes=(tf.TensorShape((window_size, 1)), tf.TensorShape((1,))),
+            output_signature=(
+                tf.TensorSpec(shape=(window_size, feature_n), dtype=tf.float32),
+                tf.TensorSpec(shape=(window_size, 1), dtype=tf.int32),
+            ),
         )
 
     def to_split_windows_numpy(self, window_size) -> Tuple[np.ndarray, np.ndarray]:
@@ -137,7 +141,7 @@ class Dataset(abc.ABC):
                 result_y = windows_y
         return result_x, result_y
 
-    def to_window_numpy(self, window_size) -> Tuple[np.ndarray, np.ndarray]:
+    def to_sliding_windows_numpy(self, window_size) -> Tuple[np.ndarray, np.ndarray]:
         result_x = None
         result_y = None
         for f in self.data_files:
