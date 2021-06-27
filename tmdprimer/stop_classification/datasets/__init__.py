@@ -123,7 +123,7 @@ class Dataset(abc.ABC):
             _iter,
             output_signature=(
                 tf.TensorSpec(shape=(window_size, 1), dtype=tf.float32),
-                tf.TensorSpec(shape=(window_size, 1), dtype=tf.int32),
+                tf.TensorSpec(shape=(1,), dtype=tf.int32),
             ),
         )
 
