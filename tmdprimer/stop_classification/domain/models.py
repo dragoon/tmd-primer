@@ -164,3 +164,30 @@ class SlidingWindowModel(StopClassificationModel):
             base.mark_line(color="orange").encode(y="label"),
             base.mark_line(color="red").encode(y="pred_label"),
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
+
+
+@dataclass(frozen=True)
+class SplitWindowModel(SlidingWindowModel):
+    model: tf.keras.Model
+    window_size: int
+    scaler = None
+
+    def _base_classification_df(self, data_file: DataFile) -> pd.DataFrame:
+        """
+        Computes a base dataframe with model classification results
+        """
+        df = data_file.df[["label", "linear_accel", "time"]].copy()
+
+        df["label"] = df["label"].apply(data_file.label_mapping_func)
+        x, _ = data_file.to_numpy_split_windows(window_size=self.window_size)
+        # shape[0] is the # of windows, shape[1] is the window size, shape[2] is the # of features
+        norm_flat_x = self.scaler.transform(x.reshape(x.shape[0]*x.shape[1], x.shape[2]))
+        norm_x = norm_flat_x.reshape(x.shape[0], x.shape[1], x.shape[2])
+        pred_y = self.model.predict(norm_x, batch_size=1)
+        df.loc[:, "pred_label"] = (
+            pd.Series(pred_y.flatten())
+        )
+        # fill the remainder with 1 -- no stop (will be < size of the window at the end)
+        df.fillna(1, inplace=True)
+        return df
+
