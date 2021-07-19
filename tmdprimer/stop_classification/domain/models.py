@@ -7,6 +7,8 @@ import pandas as pd
 import altair as alt
 from dataclasses import dataclass
 
+from sklearn.preprocessing import StandardScaler
+
 from tmdprimer.stop_classification.datasets import DataFile
 from tmdprimer.stop_classification.datasets.dvdt_dataset import AnnotatedStop
 
@@ -163,7 +165,7 @@ class SlidingWindowModel(StopClassificationModel):
 class SplitWindowModel(StopClassificationModel):
     model: tf.keras.Model
     window_size: int
-    scaler = None
+    scaler: StandardScaler
 
     def _base_classification_df(self, data_file: DataFile) -> pd.DataFrame:
         """
