@@ -12,49 +12,18 @@ from tmdprimer.stop_classification.datasets.dvdt_dataset import AnnotatedStop
 
 
 class StopClassificationModel(abc.ABC):
-    @abc.abstractmethod
-    def compute_stops(self, *args, **kwargs):
-        pass
 
     @abc.abstractmethod
-    def predict_figure(self, *args, **kwargs):
+    def _base_classification_df(self, *args, **kwargs):
         pass
-
-    @abc.abstractmethod
-    def predict_figure_smoothed(self, *args, **kwargs):
-        pass
-
-
-@dataclass(frozen=True)
-class SlidingWindowModel(StopClassificationModel):
-    model: tf.keras.Model
-    window_size: int
-
-    def _base_classification_df(self, data_file: DataFile) -> pd.DataFrame:
-        """
-        Computes a base dataframe with model classification results
-        """
-        df = data_file.df[["label", "linear_accel", "time"]].copy()
-
-        df["label"] = df["label"].apply(data_file.label_mapping_func)
-        x, _ = data_file.to_numpy_sliding_windows(window_size=self.window_size)
-        pred_y = self.model.predict(x)
-        df.loc[:, "pred_label"] = (
-            pd.Series(pred_y.flatten())
-            # reindex to insert NANs in the beginning, adjust for predicting middle element
-            .reindex(range(len(pred_y) - len(df) + self.window_size // 2, len(pred_y))).reset_index(drop=True)
-        )
-        # fill the first window with 1 -- no stop
-        df.fillna(1, inplace=True)
-        return df
 
     def compute_stops(
-        self,
-        data_file: DataFile,
-        smoothing_window_size: int,
-        threshold_probability: float,
-        min_stop_duration: timedelta = timedelta(seconds=5),
-        min_interval_between_stops: timedelta = timedelta(seconds=10),
+            self,
+            data_file: DataFile,
+            smoothing_window_size: int,
+            threshold_probability: float,
+            min_stop_duration: timedelta = timedelta(seconds=5),
+            min_interval_between_stops: timedelta = timedelta(seconds=10),
     ) -> List[AnnotatedStop]:
         """
         :param data_file: data file to classify
@@ -84,9 +53,9 @@ class SlidingWindowModel(StopClassificationModel):
                 first_stop_time = next(x[1] for x in current_labels if x[0] < 0.5)
                 stop_windows[-1]["start"] = first_stop_time.to_pydatetime()
             elif (
-                current_sum / smoothing_window_size >= threshold_probability
-                and "start" in stop_windows[-1]
-                and "end" not in stop_windows[-1]
+                    current_sum / smoothing_window_size >= threshold_probability
+                    and "start" in stop_windows[-1]
+                    and "end" not in stop_windows[-1]
             ):
                 # find the LAST stop label
                 try:
@@ -140,12 +109,12 @@ class SlidingWindowModel(StopClassificationModel):
         ).properties(width=width, height=height, autosize=alt.AutoSizeParams(type="fit", contains="padding"))
 
     def predict_figure_smoothed(
-        self,
-        data_file: DataFile,
-        smoothing_window_size: int,
-        threshold_probability: float = 0.5,
-        width=800,
-        height=600,
+            self,
+            data_file: DataFile,
+            smoothing_window_size: int,
+            threshold_probability: float = 0.5,
+            width=800,
+            height=600,
     ):
         df = data_file.df[["label", "linear_accel", "time"]].copy()
         df["label"] = df["label"].apply(data_file.label_mapping_func)
@@ -167,7 +136,31 @@ class SlidingWindowModel(StopClassificationModel):
 
 
 @dataclass(frozen=True)
-class SplitWindowModel(SlidingWindowModel):
+class SlidingWindowModel(StopClassificationModel):
+    model: tf.keras.Model
+    window_size: int
+
+    def _base_classification_df(self, data_file: DataFile) -> pd.DataFrame:
+        """
+        Computes a base dataframe with model classification results
+        """
+        df = data_file.df[["label", "linear_accel", "time"]].copy()
+
+        df["label"] = df["label"].apply(data_file.label_mapping_func)
+        x, _ = data_file.to_numpy_sliding_windows(window_size=self.window_size)
+        pred_y = self.model.predict(x)
+        df.loc[:, "pred_label"] = (
+            pd.Series(pred_y.flatten())
+            # reindex to insert NANs in the beginning, adjust for predicting middle element
+            .reindex(range(len(pred_y) - len(df) + self.window_size // 2, len(pred_y))).reset_index(drop=True)
+        )
+        # fill the first window with 1 -- no stop
+        df.fillna(1, inplace=True)
+        return df
+
+
+@dataclass(frozen=True)
+class SplitWindowModel(StopClassificationModel):
     model: tf.keras.Model
     window_size: int
     scaler = None
