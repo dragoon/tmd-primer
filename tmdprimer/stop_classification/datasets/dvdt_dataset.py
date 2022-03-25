@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from itertools import groupby
-from typing import Dict, List, Tuple, Callable
+from typing import Dict, List, Tuple, Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -27,6 +27,8 @@ class DVDTFile(DataFile):
     comment: str
     annotated_stops: List[AnnotatedStop]
     df: pd.DataFrame
+    # df with real-time classification results from the phone
+    classification_df: Optional[pd.DataFrame]
     label_mapping_func: Callable[[str], int] = dvdt_stop_classification_mapping
 
     @classmethod
@@ -39,11 +41,13 @@ class DVDTFile(DataFile):
         comment = metadata["comment"]
         annotated_stops = [AnnotatedStop.from_json(s) for s in json_dict.get("stops", [])]
         df = pd.DataFrame(json_dict["entries"])
+        classification_df = pd.DataFrame(json_dict.get("stop_classification_entries", []))
         # add labels to the df
         df["label"] = transport_mode
         for st in json_dict.get("stops", []):
             df.loc[(df["timestamp"] <= st["endTime"]) & (df["timestamp"] >= st["startTime"]), "label"] = STOP_LABEL
-        return DVDTFile(start_time, end_time, num_stations, transport_mode, comment, annotated_stops, df)
+        return DVDTFile(start_time, end_time, num_stations, transport_mode,
+                        comment, annotated_stops, df, classification_df)
 
     def __post_init__(self):
         self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
