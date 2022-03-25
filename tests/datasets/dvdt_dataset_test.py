@@ -93,6 +93,16 @@ class TestDVDTLoader(TestCase):
         self.assertEqual(durations, [timedelta(milliseconds=2)])
 
 
+class TestEmptyDVDTLoader(TestCase):
+    """Check everything works with an empty file"""
+    test_file: DVDTFile
+
+    def test_empty_file(self):
+        file_path = os.path.dirname(os.path.realpath(__file__))
+        self.test_file = DVDTFile.from_json(json.load(open(f"{file_path}/accel_data_empty.json")))
+        self.dataset = DVDTDataset([self.test_file])
+
+
 class TestMetrics(TestCase):
     test_file: DVDTFile
 

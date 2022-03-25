@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "timestamp": 1,
+    "endtime": 6,
+    "numberStations": 0,
+    "name": "tram 10 zh",
+    "transportMode": "tram",
+    "comment": "tram 10"
+  },
+  "stops": [],
+  "entries": [],
+  "stop_classification_entries": []
+}
