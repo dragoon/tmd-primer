@@ -54,6 +54,8 @@ class DVDTFile(DataFile):
             self.df["linear_accel"] = np.sqrt(self.df["x"] ** 2 + self.df["y"] ** 2 + self.df["z"] ** 2)
             self.df["time"] = pd.to_datetime(self.df["timestamp"], unit="ms")
             self.df["time_diff"] = self.df["timestamp"].diff()
+        if len(self.classification_df) > 0:
+            self.classification_df["time"] = pd.to_datetime(self.df["timestamp"], unit="ms")
 
     @staticmethod
     def _get_rolling_quantile_accel(window_size, quantile, input_data: pd.Series):
